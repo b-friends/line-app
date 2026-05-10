@@ -551,6 +551,7 @@ async function doGenerateTeams() {
   renderGameResult(r.game, r.restPlayers);
   show('resultCard');
   showMsg(r.message, 'success');
+  el('messageCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function renderGameResult(game, restPlayers) {
@@ -623,15 +624,15 @@ async function doSaveResults() {
   const r = await api('submitGameResults', { idToken: S.idToken, sessionId, results });
   disableAll(false);
   if (r.ok) {
-    // 休憩者を次ゲームの prevRestIds に保存
     _prevRestIds = Array.from(el('teamPlayerList').querySelectorAll('.player-check:not(:checked)')).map(i => i.value);
     _currentGameNumber++;
     el('gameNumberLabel').textContent = _currentGameNumber;
     el('teamResult').innerHTML = '';
     hide('resultCard');
-    showMsg(r.message + ' 次のゲームの参加者を選択してください。', 'success');
     doRefreshWinRates();
     await loadTeamPlayerList();
+    showMsg(r.message + ' 次のゲームの参加者を選択してください。', 'success');
+    el('messageCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   } else { showMsg(r.message, 'error'); }
 }
 
