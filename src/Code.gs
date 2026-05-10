@@ -95,7 +95,6 @@ function handleRequest_(action, params) {
       case 'getLatestGameNumber':       result = getLatestGameNumber(params); break;
       case 'submitGameResults':       result = submitGameResults(params); break;
       case 'getWinRates':             result = getWinRates(params.idToken); break;
-      case 'generateExportList':      result = generateExportList(params); break;
       case 'getDocs':                 result = getDocs(params.idToken); break;
       case 'getMyPage':               result = getMyPage(params.idToken); break;
       case 'updateProfile':           result = updateProfile(params); break;
@@ -380,8 +379,8 @@ function generateTeams(payload) {
 
     const opsSS = getOpsSS_();
     const responses = readObjects_(opsSS.getSheetByName(SHEET_NAMES.RESPONSES));
-    const attendees = responses.filter(r => r.sessionId === sessionId && (r.answer === 'yes' || r.answer === 'attended'));
-    if (attendees.length < 6) throw new Error('参加者が6名未満のためチーム編成できません。');
+    const attendees = responses.filter(r => r.sessionId === sessionId && r.answer === 'attended');
+    if (attendees.length < 6) throw new Error('参加済みの方が6名未満のためチーム編成できません。');
 
     const members = readObjects_(getRosterSheet_());
     const memberMap = {};
@@ -476,7 +475,7 @@ function suggestRestAction(payload) {
   const prevRestIds = Array.isArray(payload.prevRestIds) ? payload.prevRestIds : [];
   const opsSS = getOpsSS_();
   const responses = readObjects_(opsSS.getSheetByName(SHEET_NAMES.RESPONSES));
-  const attendees = responses.filter(r => r.sessionId === sessionId && (r.answer === 'yes' || r.answer === 'attended'));
+  const attendees = responses.filter(r => r.sessionId === sessionId && r.answer === 'attended');
   const members = readObjects_(getRosterSheet_());
   const memberMap = {};
   members.forEach(m => { if (m[MC.LINE_ID]) memberMap[m[MC.LINE_ID]] = m; });
@@ -837,66 +836,42 @@ function updateActivityReport_(sessionId) {
     counts[band * 2 + (isTrial ? 1 : 0)]++;
   });
   const total = counts.reduce((s, v) => s + v, 0);
+  const dayLabel = eventDate.slice(5).replace('-', '/');
 
-  // Report_{monthKey} シートを取得 or 新規作成（ExportTemplateは一切触らない）
-  const reportName = 'Report_' + monthKey;
+  const ym = monthKey.replace('-', '');
+  const reportName = 'Report_' + ym;
   let rSheet = opsSS.getSheetByName(reportName);
   if (!rSheet) {
-    rSheet = opsSS.insertSheet(reportName);
-    const monthLabel = monthKey.replace(/-(\d+)/, (_, m) => '年' + Number(m) + '月');
-    rSheet.getRange('A1:A2').merge();
+    const tmpl = opsSS.getSheetByName(SHEET_NAMES.EXPORT);
+    rSheet = tmpl.copyTo(opsSS);
+    rSheet.setName(reportName);
+    const monthLabel = monthKey.replace(/(\d+)-(\d+)/, (_, y, m) => y + '年' + Number(m) + '月');
     rSheet.getRange('A1').setValue(monthLabel);
-    rSheet.getRange('B1:L1').merge();
-    rSheet.getRange('B1').setValue('対象別利用者人数');
-    rSheet.getRange('B2:C2').merge(); rSheet.getRange('B2').setValue('0～6歳');
-    rSheet.getRange('D2:E2').merge(); rSheet.getRange('D2').setValue('7～15歳');
-    rSheet.getRange('F2:G2').merge(); rSheet.getRange('F2').setValue('16～30歳');
-    rSheet.getRange('H2:I2').merge(); rSheet.getRange('H2').setValue('31～59歳');
-    rSheet.getRange('J2:K2').merge(); rSheet.getRange('J2').setValue('60歳～');
-    rSheet.getRange('L2').setValue('合計');
-    rSheet.getRange('A3:L3').setValues([['月','会員','会員外','会員','会員外','会員','会員外','会員','会員外','会員','会員外','']]);
-    rSheet.setFrozenRows(3);
+    rSheet.getRange(4, 1, 6, 12).clearContent();
   }
 
-  // 計行を探す
-  const lr = rSheet.getLastRow();
-  let keRow = -1;
-  if (lr >= 4) {
-    const col1 = rSheet.getRange(4, 1, lr - 3, 1).getValues();
-    col1.forEach((v, i) => { if (String(v[0]).trim() === '計') keRow = i + 4; });
-  }
+  // 計行は常に10行目固定
+  const keRow = 10;
 
-  // 該当開催日の行を探す
+  // 該当開催日の行を探す（dayLabelで比較）
   let targetRow = -1;
-  if (lr >= 4) {
-    const col1 = rSheet.getRange(4, 1, lr - 3, 1).getValues();
-    col1.forEach((v, i) => { if (String(v[0]).trim() === eventDate) targetRow = i + 4; });
-  }
-
+  const col1 = rSheet.getRange(4, 1, 6, 1).getValues();
+  col1.forEach((v, i) => { if (String(v[0]).trim() === dayLabel) targetRow = i + 4; });
   if (targetRow < 0) {
-    if (keRow > 0) {
-      rSheet.insertRowBefore(keRow);
-      targetRow = keRow;
-      keRow++;
-    } else {
-      // 計行がなければデータ行の次に計行を追加
-      targetRow = rSheet.getLastRow() + 1;
-      rSheet.getRange(targetRow + 1, 1).setValue('計');
-      keRow = targetRow + 1;
-    }
+    // 空行を探して挿入
+    col1.forEach((v, i) => { if (targetRow < 0 && String(v[0]).trim() === '') targetRow = i + 4; });
   }
-  const dayLabel = eventDate.slice(5).replace('-', '/');
+  if (targetRow < 0) targetRow = 4; // フォールバック
+
   rSheet.getRange(targetRow, 1, 1, 12).setValues([[dayLabel, ...counts, total]]);
 
-  // 計行を再計算
-  if (keRow > 0) {
-    const totals = Array(11).fill(0);
-    for (let row = 4; row < keRow; row++) {
-      const vals = rSheet.getRange(row, 2, 1, 11).getValues()[0];
-      vals.forEach((v, i) => { totals[i] += Number(v) || 0; });
-    }
-    rSheet.getRange(keRow, 2, 1, 11).setValues([totals]);
+  // 計行（10行目）を再計算
+  const totals = Array(11).fill(0);
+  for (let row = 4; row < keRow; row++) {
+    const vals = rSheet.getRange(row, 2, 1, 11).getValues()[0];
+    vals.forEach((v, i) => { totals[i] += Number(v) || 0; });
   }
+  rSheet.getRange(keRow, 2, 1, 11).setValues([totals]);
 }
 
 function generateActivityReport(payload) {
@@ -908,7 +883,8 @@ function generateActivityReport(payload) {
   const schedMap = getScheduleMap_();
   const sessions = Object.values(schedMap).filter(s => s.monthKey === monthKey);
   sessions.forEach(s => updateActivityReport_(s.sessionId));
-  const reportName = 'Report_' + monthKey;
+  const ym = monthKey.replace('-', '');
+  const reportName = 'Report_' + ym;
   const url = getOpsSS_().getUrl() + '#gid=' + (getOpsSS_().getSheetByName(reportName) || {}).getSheetId();
   return { ok: true, message: monthKey + 'の活動報告書を生成しました。', sheetName: reportName };
 }
@@ -983,44 +959,6 @@ function getDocs(idToken) {
   }
   docs.sort((a, b) => a.name.localeCompare(b.name, 'ja'));
   return { ok: true, docs };
-}
-
-// ── 管理者: 提出用リスト生成 ──
-
-function generateExportList(payload) {
-  const profile = verifyIdToken_(payload.idToken);
-  ensureAdmin_(profile.sub);
-  const sessionId = String(payload.sessionId || '');
-
-  const opsSS = getOpsSS_();
-  const responses = readObjects_(opsSS.getSheetByName(SHEET_NAMES.RESPONSES));
-  const attendees = responses
-    .filter(r => r.sessionId === sessionId && (r.answer === 'yes' || r.answer === 'attended'))
-    .sort((a, b) => String(a.fullName).localeCompare(String(b.fullName), 'ja'));
-
-  const members = readObjects_(getRosterSheet_());
-  const memberMap = {};
-  members.forEach(m => { if (m[MC.LINE_ID]) memberMap[m[MC.LINE_ID]] = m; });
-
-  const list = attendees.map(a => {
-    const m = memberMap[a.lineId] || {};
-    return { no: a.no || m[MC.NO], fullName: a.fullName, furigana: m[MC.FURIGANA] || '', gender: m[MC.GENDER] || '', ageApril1: m[MC.AGE_APRIL1] || '' };
-  });
-
-  const exportSheet = opsSS.getSheetByName(SHEET_NAMES.EXPORT);
-  const startRow = 3;
-  const eventDate = attendees[0] ? attendees[0].eventDate : '';
-  exportSheet.getRange('A1').setValue('参加者リスト — ' + eventDate);
-  exportSheet.getRange('A2').setValue('No,氏名,ふりがな,性別,年齢');
-  if (exportSheet.getLastRow() >= startRow) {
-    exportSheet.getRange(startRow, 1, exportSheet.getLastRow() - startRow + 1, 5).clearContent();
-  }
-  if (list.length) {
-    const data = list.map(l => [l.no, l.fullName, l.furigana, l.gender, l.ageApril1]);
-    exportSheet.getRange(startRow, 1, data.length, 5).setValues(data);
-  }
-
-  return { ok: true, count: list.length, message: list.length + '名の参加者リストをExportTemplateシートに出力しました。' };
 }
 
 // ── スケジュールビュー ──

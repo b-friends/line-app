@@ -41,7 +41,6 @@ function showPage(page) {
 document.addEventListener('DOMContentLoaded', () => {
   el('saveButton').addEventListener('click', doSave);
   el('generateTeamsBtn').addEventListener('click', doGenerateTeams);
-  el('exportListBtn').addEventListener('click', doExportList);
   el('saveResultsBtn').addEventListener('click', doSaveResults);
   el('refreshWinRateBtn').addEventListener('click', doRefreshWinRates);
   el('refreshDocsBtn').addEventListener('click', doLoadDocs);
@@ -97,12 +96,10 @@ async function loadSession() {
       if (page === 'schedule') {
         renderSchedule(r.schedule || []);
         if (r.isAdmin) { show('adminCard'); loadAdminView(); }
-        if (r.isAdmin) el('exportListBtn').classList.remove('hidden');
       } else if (page === 'teams') {
         S.schedule = r.schedule || [];
         populateTeamSelect();
         doRefreshWinRates();
-        if (r.isAdmin) el('exportListBtn').classList.remove('hidden');
         showMsg('予定を選んでチーム編成してください。', 'info');
       } else if (page === 'register') {
         if (r.isAdmin) show('adminRegisterPane');
@@ -779,16 +776,6 @@ async function doLoadDocs() {
       '<span class="doc-arrow">›</span>' +
     '</a>'
   ).join('');
-}
-
-// ── 参加者リスト出力 ──
-async function doExportList() {
-  const sessionId = el('teamSessionSelect').value;
-  if (!sessionId) { showMsg('予定を選択してください。', 'error'); return; }
-  disableAll(true);
-  const r = await api('generateExportList', { idToken: S.idToken, sessionId });
-  disableAll(false);
-  showMsg(r.message, r.ok ? 'success' : 'error');
 }
 
 // ── ユーティリティ ──
