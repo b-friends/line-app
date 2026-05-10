@@ -510,11 +510,13 @@ async function loadTeamPlayerList() {
       el('teamPlayerList').innerHTML = '';
       renderGameResult(gn.pendingGame, []);
       show('resultCard');
+      hide('generateTeamsBtn');
       el('gameNumberLabel').textContent = _currentGameNumber;
       return;
     }
   }
   el('gameNumberLabel').textContent = _currentGameNumber;
+  show('generateTeamsBtn');
 
   // 休憩者自動提案を取得
   const r = await api('suggestRest', { idToken: S.idToken, sessionId, prevRestIds: _prevRestIds });

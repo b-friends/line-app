@@ -161,7 +161,8 @@ function initializeSession(idToken) {
     member: member ? {
       no: member[MC.NO], fullName: member[MC.FULL_NAME],
       gender: member[MC.GENDER], ageApril1: member[MC.AGE_APRIL1],
-      lineId: profile.sub,
+      furigana: member[MC.FURIGANA], mobilePhone: member[MC.MOBILE_PHONE],
+      address: member[MC.ADDRESS], lineId: profile.sub,
     } : null,
     lineProfileName: profile.name || '',
     schedule,
@@ -278,7 +279,7 @@ function registerNewMember(payload) {
         default:              return '';
       }
     });
-    sheet.appendRow(newRow);
+    appendRowRaw_(sheet, headers, newRow);
 
     return {
       ok: true,
@@ -956,7 +957,7 @@ function adminRegisterMember(payload) {
         default:              return '';
       }
     });
-    sheet.appendRow(newRow);
+    appendRowRaw_(sheet, headers, newRow);
     return { ok: true, message: '「' + fullName + '」を代理登録しました。' };
   } finally { lock.releaseLock(); }
 }
@@ -1135,7 +1136,16 @@ function createSheetIfMissing_(ss, name, headers) {
 }
 
 function appendRow_(sheet, headers, obj) {
-  sheet.appendRow(headers.map(h => obj[h] !== undefined ? obj[h] : ''));
+  appendRowRaw_(sheet, headers, headers.map(h => obj[h] !== undefined ? obj[h] : ''));
+}
+
+function appendRowRaw_(sheet, headers, rowValues) {
+  const rowNum = sheet.getLastRow() + 1;
+  PHONE_COLS_.forEach(col => {
+    const ci = headers.indexOf(col);
+    if (ci >= 0) sheet.getRange(rowNum, ci + 1).setNumberFormat('@STRING@');
+  });
+  sheet.getRange(rowNum, 1, 1, headers.length).setValues([rowValues]);
 }
 
 function writeRow_(sheet, rowNum, headers, obj) {
@@ -1156,9 +1166,14 @@ function getSheetHeaders_(sheet) {
   return sheet.getRange(1, 1, 1, lc).getDisplayValues()[0];
 }
 
+const PHONE_COLS_ = [MC.MOBILE_PHONE, MC.HOME_PHONE];
+
 function setColValue_(sheet, headers, rowNum, colName, value) {
   const col = headers.indexOf(colName);
-  if (col >= 0) sheet.getRange(rowNum, col + 1).setValue(value);
+  if (col < 0) return;
+  const cell = sheet.getRange(rowNum, col + 1);
+  if (PHONE_COLS_.includes(colName)) cell.setNumberFormat('@STRING@');
+  cell.setValue(value);
 }
 
 // ── スプレッドシート取得 ──
