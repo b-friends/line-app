@@ -19,11 +19,22 @@ async function api(action, params = {}) {
       body: payload,
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    return await res.json();
+    const json = await res.json();
+    if (!json.ok && json.message && json.message.includes('expired')) {
+      showMsg('セッションが切れました。再ログインします…', 'info');
+      setTimeout(() => liff.login(), 1500);
+      return json;
+    }
+    return json;
   } catch (e) {
     const res2 = await fetch(url + '?payload=' + encodeURIComponent(payload), { method: 'GET', mode: 'cors', redirect: 'follow' });
     if (!res2.ok) throw new Error('HTTP ' + res2.status);
-    return await res2.json();
+    const json2 = await res2.json();
+    if (!json2.ok && json2.message && json2.message.includes('expired')) {
+      showMsg('セッションが切れました。再ログインします…', 'info');
+      setTimeout(() => liff.login(), 1500);
+    }
+    return json2;
   }
 }
 
