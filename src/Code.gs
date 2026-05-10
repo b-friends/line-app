@@ -805,95 +805,97 @@ function updateActivityReport_(sessionId) {
   const monthKey = ses.monthKey;
   const eventDate = ses.eventDate;
 
-  // attended の参加者を取得
   const responses = readObjects_(opsSS.getSheetByName(SHEET_NAMES.RESPONSES));
   const attendees = responses.filter(r => r.sessionId === sessionId && r.answer === 'attended');
 
-  // 名簿から生年月日・ステータス取得
   const members = readObjects_(getRosterSheet_());
   const memberMap = {};
   members.forEach(m => { if (m[MC.LINE_ID]) memberMap[m[MC.LINE_ID]] = m; });
 
-  // 開催日時点の実年齢を計算
   const evtDate = new Date(eventDate);
   function calcAge(birthDateStr) {
     if (!birthDateStr) return null;
     const bd = new Date(birthDateStr);
     let age = evtDate.getFullYear() - bd.getFullYear();
-    const m = evtDate.getMonth() - bd.getMonth();
-    if (m < 0 || (m === 0 && evtDate.getDate() < bd.getDate())) age--;
+    const mo = evtDate.getMonth() - bd.getMonth();
+    if (mo < 0 || (mo === 0 && evtDate.getDate() < bd.getDate())) age--;
     return age;
   }
 
-  // 年齢帯別・会員別集計
-  // 列: [0-6会員, 0-6会員外, 7-15会員, 7-15会員外, 16-30会員, 16-30会員外, 31-59会員, 31-59会員外, 60+会員, 60+会員外]
   const counts = [0,0,0,0,0,0,0,0,0,0];
   attendees.forEach(a => {
     const m = memberMap[a.lineId] || {};
     const isTrial = String(m[MC.STATUS] || '').trim() === '体験';
     const age = calcAge(m[MC.BIRTH_DATE]);
     let band;
-    if (age === null) band = 3; // 不明なら成人扱い
+    if (age === null) band = 3;
     else if (age <= 6)  band = 0;
     else if (age <= 15) band = 1;
     else if (age <= 30) band = 2;
     else if (age <= 59) band = 3;
     else                band = 4;
-    const col = band * 2 + (isTrial ? 1 : 0);
-    counts[col]++;
+    counts[band * 2 + (isTrial ? 1 : 0)]++;
   });
   const total = counts.reduce((s, v) => s + v, 0);
 
-  // Report_{monthKey} シートを取得 or 作成
+  // Report_{monthKey} シートを取得 or 新規作成（ExportTemplateは一切触らない）
   const reportName = 'Report_' + monthKey;
   let rSheet = opsSS.getSheetByName(reportName);
   if (!rSheet) {
-    // ExportTemplateからコピー
-    const tmpl = opsSS.getSheetByName(SHEET_NAMES.EXPORT);
-    rSheet = tmpl.copyTo(opsSS);
-    rSheet.setName(reportName);
-    // 計行をクリア
-    if (rSheet.getLastRow() >= 4) rSheet.getRange(4, 1, rSheet.getLastRow() - 3, 12).clearContent();
+    rSheet = opsSS.insertSheet(reportName);
+    const monthLabel = monthKey.replace(/-(\d+)/, (_, m) => '年' + Number(m) + '月');
+    rSheet.getRange('A1:A2').merge();
+    rSheet.getRange('A1').setValue(monthLabel);
+    rSheet.getRange('B1:L1').merge();
+    rSheet.getRange('B1').setValue('対象別利用者人数');
+    rSheet.getRange('B2:C2').merge(); rSheet.getRange('B2').setValue('0～6歳');
+    rSheet.getRange('D2:E2').merge(); rSheet.getRange('D2').setValue('7～15歳');
+    rSheet.getRange('F2:G2').merge(); rSheet.getRange('F2').setValue('16～30歳');
+    rSheet.getRange('H2:I2').merge(); rSheet.getRange('H2').setValue('31～59歳');
+    rSheet.getRange('J2:K2').merge(); rSheet.getRange('J2').setValue('60歳～');
+    rSheet.getRange('L2').setValue('合計');
+    rSheet.getRange('A3:L3').setValues([['月','会員','会員外','会員','会員外','会員','会員外','会員','会員外','会員','会員外','']]);
+    rSheet.setFrozenRows(3);
+  }
+
+  // 計行を探す
+  const lr = rSheet.getLastRow();
+  let keRow = -1;
+  if (lr >= 4) {
+    const col1 = rSheet.getRange(4, 1, lr - 3, 1).getValues();
+    col1.forEach((v, i) => { if (String(v[0]).trim() === '計') keRow = i + 4; });
   }
 
   // 該当開催日の行を探す
-  const lr = rSheet.getLastRow();
   let targetRow = -1;
   if (lr >= 4) {
     const col1 = rSheet.getRange(4, 1, lr - 3, 1).getValues();
     col1.forEach((v, i) => { if (String(v[0]).trim() === eventDate) targetRow = i + 4; });
   }
-  // なければ計行の前に挿入
+
   if (targetRow < 0) {
-    // 計行を探す（A列が「計」の行）
-    let keRow = -1;
-    if (lr >= 4) {
-      const col1 = rSheet.getRange(4, 1, lr - 3, 1).getValues();
-      col1.forEach((v, i) => { if (String(v[0]).trim() === '計') keRow = i + 4; });
-    }
     if (keRow > 0) {
       rSheet.insertRowBefore(keRow);
       targetRow = keRow;
+      keRow++;
     } else {
-      targetRow = lr + 1;
+      // 計行がなければデータ行の次に計行を追加
+      targetRow = rSheet.getLastRow() + 1;
+      rSheet.getRange(targetRow + 1, 1).setValue('計');
+      keRow = targetRow + 1;
     }
   }
-  rSheet.getRange(targetRow, 1, 1, 12).setValues([[eventDate, ...counts, total]]);
+  const dayLabel = eventDate.slice(5).replace('-', '/');
+  rSheet.getRange(targetRow, 1, 1, 12).setValues([[dayLabel, ...counts, total]]);
 
   // 計行を再計算
-  const dataLr = rSheet.getLastRow();
-  let keRow2 = -1;
-  if (dataLr >= 4) {
-    const col1 = rSheet.getRange(4, 1, dataLr - 3, 1).getValues();
-    col1.forEach((v, i) => { if (String(v[0]).trim() === '計') keRow2 = i + 4; });
-  }
-  if (keRow2 > 0) {
+  if (keRow > 0) {
     const totals = Array(11).fill(0);
-    for (let row = 4; row < keRow2; row++) {
+    for (let row = 4; row < keRow; row++) {
       const vals = rSheet.getRange(row, 2, 1, 11).getValues()[0];
       vals.forEach((v, i) => { totals[i] += Number(v) || 0; });
     }
-    rSheet.getRange(keRow2, 2, 1, 11).setValues([totals]);
+    rSheet.getRange(keRow, 2, 1, 11).setValues([totals]);
   }
 }
 
