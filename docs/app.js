@@ -534,6 +534,7 @@ async function loadTeamPlayerList() {
   }
   el('gameNumberLabel').textContent = _currentGameNumber;
   show('generateTeamsBtn');
+  show('teamPlayerList');
 
   // 休憩者自動提案を取得
   const r = await api('suggestRest', { idToken: S.idToken, sessionId, prevRestIds: _prevRestIds });
@@ -567,6 +568,8 @@ async function doGenerateTeams() {
   const r = await api('generateTeams', { idToken: S.idToken, sessionId, gameNumber: _currentGameNumber, restLineIds });
   disableAll(false);
   if (!r.ok) { showMsg(r.message, 'error'); return; }
+  hide('teamPlayerList');
+  hide('generateTeamsBtn');
   renderGameResult(r.game, r.restPlayers);
   show('resultCard');
   showMsg(r.message, 'success');
