@@ -664,7 +664,10 @@ function getMyPage(idToken) {
     .map(r => {
       const res = resultMap[r.sessionId + '|' + r.gameNumber];
       const outcome = res.winTeam === 'draw' ? 'draw' : res.winTeam === r.teamName ? 'win' : 'loss';
-      return { date: r.eventDate, game: r.gameNumber, outcome };
+      const myScore  = r.teamName === res.teamA ? Number(res.scoreA) : Number(res.scoreB);
+      const oppScore = r.teamName === res.teamA ? Number(res.scoreB) : Number(res.scoreA);
+      const scoreDiff = myScore - oppScore;
+      return { date: r.eventDate, game: r.gameNumber, outcome, scoreDiff };
     });
 
   return {

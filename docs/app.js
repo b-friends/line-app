@@ -741,15 +741,20 @@ function renderStats(s, recentGames) {
   });
 
   const labels = recentGames.map((g, i) => (i + 1) + '戦');
-  const data   = recentGames.map(g => g.outcome === 'win' ? 1 : g.outcome === 'draw' ? 0.5 : 0);
+  const data   = recentGames.map(g => g.scoreDiff || 0);
   _chartLine = new Chart(el('chartLine'), {
-    type: 'line',
+    type: 'bar',
     data: {
       labels,
-      datasets: [{ label: '直近の勝敗', data, borderColor: '#0f62fe', backgroundColor: 'rgba(15,98,254,.1)', pointBackgroundColor: data.map(v => v === 1 ? '#0f62fe' : v === 0.5 ? '#aab4c8' : '#d93025'), tension: 0.3, fill: true }],
+      datasets: [{
+        label: '得失点差',
+        data,
+        backgroundColor: data.map(v => v > 0 ? 'rgba(15,98,254,0.7)' : v === 0 ? 'rgba(170,180,200,0.7)' : 'rgba(217,48,37,0.7)'),
+        borderWidth: 0,
+      }],
     },
     options: {
-      scales: { y: { min: 0, max: 1, ticks: { callback: v => v === 1 ? '勝' : v === 0.5 ? '分' : '負' } } },
+      scales: { y: { ticks: { stepSize: 1 } } },
       plugins: { legend: { display: false } },
     },
   });
