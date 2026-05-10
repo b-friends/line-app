@@ -209,7 +209,12 @@ function registerMember(payload) {
     const member = rows[idx];
     return {
       ok: true,
-      member: { no: member[MC.NO], fullName: member[MC.FULL_NAME], gender: member[MC.GENDER], ageApril1: member[MC.AGE_APRIL1] },
+      member: {
+        no: member[MC.NO], fullName: member[MC.FULL_NAME],
+        gender: member[MC.GENDER], ageApril1: member[MC.AGE_APRIL1],
+        furigana: member[MC.FURIGANA], mobilePhone: member[MC.MOBILE_PHONE],
+        address: member[MC.ADDRESS], birthDate: member[MC.BIRTH_DATE], lineId: profile.sub,
+      },
       lineProfileName: profile.name || '',
     };
   } finally { lock.releaseLock(); }
@@ -282,7 +287,7 @@ function registerNewMember(payload) {
 
     return {
       ok: true,
-      member: { no: String(newNo), fullName, gender, ageApril1: String(ageApril1) },
+      member: { no: String(newNo), fullName, furigana, gender, ageApril1: String(ageApril1), birthDate, mobilePhone, address, lineId: profile.sub },
       lineProfileName: profile.name || '',
     };
   } finally { lock.releaseLock(); }
