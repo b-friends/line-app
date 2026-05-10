@@ -848,6 +848,7 @@ function updateActivityReport_(sessionId) {
     const monthLabel = monthKey.replace(/(\d+)-(\d+)/, (_, y, m) => y + '年' + Number(m) + '月');
     rSheet.getRange('A1').setValue(monthLabel);
     rSheet.getRange(4, 1, 6, 12).clearContent();
+    rSheet.getRange(4, 1, 6, 1).setNumberFormat('@STRING@');
   }
 
   // 計行は常に10行目固定
@@ -861,9 +862,11 @@ function updateActivityReport_(sessionId) {
     const col1e = rSheet.getRange(4, 1, 6, 1).getDisplayValues();
     col1e.forEach((v, i) => { if (targetRow < 0 && String(v[0]).trim() === '') targetRow = i + 4; });
   }
-  if (targetRow < 0) targetRow = 4; // フォールバック
+  if (targetRow < 0) targetRow = 4;
 
-  rSheet.getRange(targetRow, 1, 1, 12).setValues([[dayLabel, ...counts, total]]);
+  // A列を文字列書式に設定してから書き込む
+  rSheet.getRange(targetRow, 1).setNumberFormat('@STRING@').setValue(dayLabel);
+  rSheet.getRange(targetRow, 2, 1, 11).setValues([[...counts, total]]);
 
   // 計行（10行目）を再計算
   const totals = Array(11).fill(0);
