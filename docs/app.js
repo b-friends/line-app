@@ -472,14 +472,22 @@ let _loadingTeam = false;
 function populateTeamSelect() {
   const sel = el('teamSessionSelect');
   sel.innerHTML = '';
+  const today = new Date().toISOString().slice(0, 10);
+  let defaultIdx = 0;
+  let found = false;
   (S.schedule||[]).forEach(m => {
     m.sessions.forEach(s => {
       const opt = document.createElement('option');
       opt.value = s.sessionId;
       opt.textContent = s.eventDate + ' ' + s.title + '（参加' + s.counts.yes + '名）';
       sel.appendChild(opt);
+      if (!found && s.eventDate >= today) {
+        defaultIdx = sel.options.length - 1;
+        found = true;
+      }
     });
   });
+  if (sel.options.length) sel.selectedIndex = defaultIdx;
   // changeイベントは1回のみ登録
   sel.onchange = () => {
     _currentSessionId = '';
