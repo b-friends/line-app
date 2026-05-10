@@ -194,19 +194,16 @@ function buildMatchups_(teams, vsCount, numTeams, gameNumber) {
  * 余り人数分を一般メンバーから優先的に選ぶ（体験者は最後）
  * 前ゲームで参加した人（休憩していない人）を先に休憩候補にする
  */
-function suggestRest(allPlayers, prevRestIds) {
+function suggestRest(allPlayers) {
   const n = allPlayers.length;
   const playCount = n >= 13 ? Math.min(n, 16) : Math.min(n, 8);
   const restCount = n - playCount;
   if (restCount <= 0) return [];
 
+  // 体験者は最後に休憩候補、同一参加回数内はランダム
   const sorted = allPlayers.slice().sort((a, b) => {
-    // 体験者は最後に休憩候補
     if (a.isTrial !== b.isTrial) return a.isTrial ? 1 : -1;
-    // 前ゲームで休憩していない人を先に休憩候補
-    const aRested = prevRestIds.includes(a.lineId) ? 1 : 0;
-    const bRested = prevRestIds.includes(b.lineId) ? 1 : 0;
-    return aRested - bRested;
+    return b.playCount - a.playCount;
   });
 
   return sorted.slice(0, restCount).map(p => p.lineId);

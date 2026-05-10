@@ -475,7 +475,6 @@ function renderAdmin(months) {
 
 // ── チーム編成 ──
 let _currentGameNumber = 1;
-let _prevRestIds = [];
 let _currentSessionId = '';
 let _loadingTeam = false;
 
@@ -518,7 +517,6 @@ async function loadTeamPlayerList() {
   if (!sessionId) { _loadingTeam = false; return; }
   if (sessionId !== _currentSessionId) {
     _currentSessionId = sessionId;
-    _prevRestIds = [];
     // バックエンドから次のゲーム番号を取得
     const gn = await api('getLatestGameNumber', { idToken: S.idToken, sessionId });
     _currentGameNumber = gn.ok ? gn.nextGameNumber : 1;
@@ -537,7 +535,7 @@ async function loadTeamPlayerList() {
   show('teamPlayerList');
 
   // 休憩者自動提案を取得
-  const r = await api('suggestRest', { idToken: S.idToken, sessionId, prevRestIds: _prevRestIds });
+  const r = await api('suggestRest', { idToken: S.idToken, sessionId });
   const suggestedRestIds = r.ok ? r.suggestedRestIds : [];
 
   // 参加者一覧を構築
@@ -645,7 +643,6 @@ async function doSaveResults() {
   const r = await api('submitGameResults', { idToken: S.idToken, sessionId, results });
   disableAll(false);
   if (r.ok) {
-    _prevRestIds = Array.from(el('teamPlayerList').querySelectorAll('.player-check:not(:checked)')).map(i => i.value);
     _currentGameNumber++;
     el('gameNumberLabel').textContent = _currentGameNumber;
     el('teamResult').innerHTML = '';

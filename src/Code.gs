@@ -405,7 +405,7 @@ function generateTeams(payload) {
         };
       });
 
-    if (players.length < 6) throw new Error('休桬者を除いた参加者が6名未満です。');
+    if (players.length < 6) throw new Error('休憩者を除いた参加者が6名未満です。');
 
     // 前ゲームのペアカウント・対戦カウントを構築
     const gsSheet = opsSS.getSheetByName(SHEET_NAMES.GAMESETS);
@@ -472,21 +472,30 @@ function suggestRestAction(payload) {
   const caller = findMemberByLineId_(profile.sub);
   if (!caller) throw new Error('名簿に未登録です。');
   const sessionId = String(payload.sessionId || '');
-  const prevRestIds = Array.isArray(payload.prevRestIds) ? payload.prevRestIds : [];
   const opsSS = getOpsSS_();
   const responses = readObjects_(opsSS.getSheetByName(SHEET_NAMES.RESPONSES));
   const attendees = responses.filter(r => r.sessionId === sessionId && r.answer === 'attended');
   const members = readObjects_(getRosterSheet_());
   const memberMap = {};
   members.forEach(m => { if (m[MC.LINE_ID]) memberMap[m[MC.LINE_ID]] = m; });
+
+  // GameSetsから当日の参加回数を集計
+  const gsRows = readObjects_(opsSS.getSheetByName(SHEET_NAMES.GAMESETS))
+    .filter(r => r.sessionId === sessionId);
+  const playCount = {};
+  gsRows.forEach(r => { playCount[r.fullName] = (playCount[r.fullName] || 0) + 1; });
+
   const allPlayers = attendees.map(a => {
     const m = memberMap[a.lineId] || {};
-    return { lineId: a.lineId, fullName: a.fullName, isTrial: String(m[MC.STATUS] || '').trim() === '体験' };
+    return {
+      lineId: a.lineId,
+      fullName: a.fullName,
+      isTrial: String(m[MC.STATUS] || '').trim() === '体験',
+      playCount: playCount[a.fullName] || 0,
+    };
   });
-  return { ok: true, suggestedRestIds: suggestRest(allPlayers, prevRestIds) };
+  return { ok: true, suggestedRestIds: suggestRest(allPlayers) };
 }
-
-// ── 休桬者自動提案 ──
 
 function getLatestGameNumber(payload) {
   verifyIdToken_(payload.idToken);
