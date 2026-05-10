@@ -398,7 +398,7 @@ function generateTeams(payload) {
           lineId: a.lineId,
           gender: m[MC.GENDER] || '不明',
           ageApril1: Number(m[MC.AGE_APRIL1]) || 0,
-          winRate: wr ? wr.winRate : 50,
+          winRate: wr ? wr.adjustedWinRate * 100 : 50,
           totalGames: wr ? wr.games : 0,
           avgScoreDiff: wr ? wr.avgScoreDiff : 0,
           isTrial: String(m[MC.STATUS] || '').trim() === '体験',
@@ -626,11 +626,10 @@ function calcWinRates_() {
     else stats[name].losses++;
   });
 
-  const VIRTUAL = 5; // ベイズ補正の仮想試合数
+  const VIRTUAL = 5;
   Object.values(stats).forEach(s => {
-    // 補正勝率: 試合数が少ない人は50%に近づく
-    s.winRate = Math.round(((s.wins + VIRTUAL * 0.5) / (s.games + VIRTUAL)) * 100);
-    // 平均得点差
+    s.winRate = s.games > 0 ? Math.round(s.wins / s.games * 100) : 0;
+    s.adjustedWinRate = (s.wins + VIRTUAL * 0.5) / (s.games + VIRTUAL);
     s.avgScoreDiff = s.games > 0 ? s.scoreDiffSum / s.games : 0;
   });
   return stats;
