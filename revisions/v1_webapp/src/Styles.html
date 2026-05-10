@@ -1,0 +1,86 @@
+<style>
+  :root {
+    --bg:#f6f8fb; --card:#fff; --text:#18202a; --muted:#5d6978;
+    --border:#dde4ee; --primary:#0f62fe; --primary-dark:#0043ce;
+    --danger:#d93025; --success:#137333;
+    --shadow:0 10px 25px rgba(16,24,40,.08);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:16px;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+  .container{max-width:960px;margin:0 auto;display:grid;gap:16px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:18px;box-shadow:var(--shadow)}
+  .header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+  .eyebrow{margin:0 0 4px;color:var(--primary);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+  h1,h2,h3,p{margin-top:0} h1{margin-bottom:6px;font-size:28px} h2{margin-bottom:14px;font-size:20px} h3{margin:0 0 10px;font-size:18px}
+  .muted{color:var(--muted)} .hidden{display:none!important}
+  .pill{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--border);background:#f0f4ff;color:var(--primary-dark);font-size:13px;font-weight:700}
+  .member-grid,.form-grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+  .label{color:var(--muted);font-size:12px;margin-bottom:6px}
+  .value{font-size:18px;font-weight:700}
+  label span{display:block;margin-bottom:6px;font-size:13px;color:var(--muted)}
+  input[type="text"],select{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:#fff;font-size:14px}
+  .full-width{grid-column:1/-1}
+  .section-head,.session-header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+  .schedule-root,.month-section,.session-card,.admin-box,.admin-list{display:grid;gap:12px}
+  .month-section{margin-bottom:18px}
+  .session-card,.admin-box{border:1px solid var(--border);border-radius:18px;padding:14px;background:#fbfcfe}
+  .session-date{font-size:12px;color:var(--muted);margin-bottom:4px}
+  .session-title{font-weight:700;font-size:16px}
+  .status-block{display:grid;gap:6px;justify-items:end}
+  .answer-row{display:flex;flex-wrap:wrap;gap:14px}
+  .note-field{display:grid;gap:6px}
+  .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
+  .sticky-actions{position:sticky;bottom:8px;background:linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,.94) 24%);padding-top:12px}
+  button{border:0;border-radius:14px;min-height:44px;padding:0 18px;font-size:14px;font-weight:700;cursor:pointer}
+  button.primary{background:var(--primary);color:#fff}
+  button.secondary{background:#eef3ff;color:var(--primary-dark)}
+  button.danger{background:var(--danger);color:#fff}
+  button:disabled{opacity:.55;cursor:not-allowed}
+  .message{padding:12px 14px;border-radius:14px;font-weight:600}
+  .message.info{background:#eef3ff;color:var(--primary-dark)}
+  .message.success{background:#e6f4ea;color:var(--success)}
+  .message.error{background:#fce8e6;color:var(--danger)}
+  .admin-list{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+  .admin-check{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;background:#fff;border:1px solid var(--border)}
+
+  /* チーム編成 */
+  .team-result{margin-top:12px}
+  .game-block{margin-bottom:16px;border:1px solid var(--border);border-radius:14px;padding:14px;background:#f9fbff}
+  .game-title{font-weight:700;font-size:15px;margin-bottom:8px;color:var(--primary-dark)}
+  .matchup{font-size:13px;color:var(--muted);margin-bottom:10px}
+  .teams-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+  .team-box{border:1px solid var(--border);border-radius:12px;padding:12px;background:#fff}
+  .team-name{font-weight:700;margin-bottom:6px}
+  .team-meta{font-size:12px;color:var(--muted);margin-bottom:6px}
+  .team-member{font-size:14px;padding:2px 0}
+
+  /* 名簿候補リスト */
+  .name-list{max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:12px;margin-top:6px}
+  .name-item{padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:14px}
+  .name-item:last-child{border-bottom:none}
+  .name-item:active,.name-item.selected{background:#e8f0fe;color:var(--primary-dark)}
+
+  @media(max-width:700px){
+    .header,.section-head,.session-header{flex-direction:column;align-items:stretch}
+    .status-block{justify-items:start}
+    .actions{justify-content:stretch} button{width:100%}
+    .teams-grid{grid-template-columns:1fr}
+  }
+
+  /* タブ切り替え */
+  .tab-row{display:flex;gap:0;margin-bottom:14px;border-bottom:2px solid var(--border)}
+  .tab-btn{flex:1;padding:10px;border:none;background:none;font-size:14px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px}
+  .tab-btn.active{color:var(--primary);border-bottom-color:var(--primary)}
+
+  /* スコア入力 */
+  .score-row{display:flex;align-items:center;gap:10px;margin:8px 0;flex-wrap:wrap}
+  .score-team{font-weight:700;font-size:14px;min-width:70px}
+  .score-vs{font-weight:700;font-size:18px}
+  .score-input{width:60px;padding:10px;border-radius:10px;border:1px solid var(--border);font-size:18px;font-weight:700;text-align:center}
+
+  /* 勝率テーブル */
+  .wr-table{width:100%;border-collapse:collapse;font-size:14px}
+  .wr-table th,.wr-table td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:center}
+  .wr-table th{background:#f0f4ff;color:var(--primary-dark);font-size:12px}
+  .wr-table td:first-child{text-align:left;font-weight:600}
+</style>

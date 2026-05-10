@@ -1,0 +1,127 @@
+
+  :root {
+    --bg:#f6f8fb; --card:#fff; --text:#18202a; --muted:#5d6978;
+    --border:#dde4ee; --primary:#0f62fe; --primary-dark:#0043ce;
+    --danger:#d93025; --success:#137333;
+    --shadow:0 10px 25px rgba(16,24,40,.08);
+    --header-h:52px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+
+  /* 固定ヘッダー */
+  .app-header{position:fixed;top:0;left:0;right:0;height:var(--header-h);background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 16px;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+  .app-header-title{font-size:13px;font-weight:700;opacity:.85}
+  .app-header-name{font-size:15px;font-weight:700}
+
+  .container{max-width:960px;margin:0 auto;padding:calc(var(--header-h) + 16px) 16px 16px;display:grid;gap:16px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:18px;box-shadow:var(--shadow)}
+  h1,h2,h3,p{margin-top:0} h2{margin-bottom:14px;font-size:20px} h3{margin:0 0 10px;font-size:18px}
+  .muted{color:var(--muted)} .hidden{display:none!important}
+  .pill{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--border);background:#f0f4ff;color:var(--primary-dark);font-size:13px;font-weight:700}
+  .form-grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+  label span{display:block;margin-bottom:6px;font-size:13px;color:var(--muted)}
+  input[type="text"],input[type="tel"],input[type="date"],input[type="number"],select{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:#fff;font-size:14px}
+  .full-width{grid-column:1/-1}
+  .section-head,.session-header{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+  .schedule-root,.month-section,.session-card,.admin-box,.admin-list{display:grid;gap:12px}
+  .month-section{margin-bottom:18px}
+  .session-card,.admin-box{border:1px solid var(--border);border-radius:18px;padding:14px;background:#fbfcfe}
+  .session-date{font-size:12px;color:var(--muted);margin-bottom:4px}
+  .session-title{font-weight:700;font-size:16px}
+  .status-block{display:grid;gap:6px;justify-items:end}
+  .answer-row{display:flex;flex-wrap:wrap;gap:14px}
+  .note-field{display:grid;gap:6px}
+  .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
+  .sticky-actions{position:sticky;bottom:8px;background:linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,.94) 24%);padding-top:12px}
+  button{border:0;border-radius:14px;min-height:44px;padding:0 18px;font-size:14px;font-weight:700;cursor:pointer}
+  button.primary{background:var(--primary);color:#fff}
+  button.secondary{background:#eef3ff;color:var(--primary-dark)}
+  button:disabled{opacity:.55;cursor:not-allowed}
+  .message{padding:12px 14px;border-radius:14px;font-weight:600}
+  .message.info{background:#eef3ff;color:var(--primary-dark)}
+  .message.success{background:#e6f4ea;color:var(--success)}
+  .message.error{background:#fce8e6;color:var(--danger)}
+  .admin-list{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+  .admin-check{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;background:#fff;border:1px solid var(--border)}
+
+  .today-pill{background:#e6f4ea;color:var(--success);border-color:#a8d5b5;font-size:11px;min-height:22px;padding:0 8px}
+
+  /* 管理ページ */
+  .saturday-list{display:grid;gap:8px;margin-top:12px}
+  .saturday-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--border);border-radius:12px;background:#fff;cursor:pointer}
+  .saturday-item input{width:18px;height:18px;cursor:pointer}
+  .schedule-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
+  .schedule-row:last-child{border-bottom:none}
+  button.danger{background:var(--danger);color:#fff}
+  button.small{min-height:34px;padding:0 12px;font-size:13px}
+
+  /* モーダル */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px}
+  .modal-box{background:#fff;border-radius:20px;padding:24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .modal-box h2{margin-bottom:8px}
+
+  /* チーム編成 */
+  .team-player-list{display:grid;gap:8px;margin:12px 0}
+  .player-check-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid var(--border);border-radius:12px;background:#fff;cursor:pointer}
+  .player-check-item input{width:18px;height:18px;cursor:pointer}
+  .trial-badge{display:inline-block;background:#fff3cd;color:#856404;border:1px solid #ffc107;border-radius:6px;font-size:11px;padding:1px 6px;margin-left:4px;font-weight:700}
+  .rest-players{font-size:13px;color:var(--muted);margin-bottom:8px}
+  .team-result{margin-top:12px}
+  .game-block{margin-bottom:16px;border:1px solid var(--border);border-radius:14px;padding:14px;background:#f9fbff}
+  .game-title{font-weight:700;font-size:15px;margin-bottom:8px;color:var(--primary-dark)}
+  .matchup{font-size:13px;color:var(--muted);margin-bottom:10px}
+  .teams-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+  .team-box{border:1px solid var(--border);border-radius:12px;padding:12px;background:#fff}
+  .team-name{font-weight:700;margin-bottom:6px}
+  .team-meta{font-size:12px;color:var(--muted);margin-bottom:6px}
+  .team-member{font-size:14px;padding:2px 0}
+
+  /* 名簿候補リスト */
+  .name-list{max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:12px;margin-top:6px}
+  .name-item{padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:14px}
+  .name-item:last-child{border-bottom:none}
+  .name-item:active,.name-item.selected{background:#e8f0fe;color:var(--primary-dark)}
+
+  /* マイページ */
+  .profile-row{display:flex;justify-content:space-between;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--border)}
+  .profile-row:last-child{border-bottom:none}
+  .profile-label{font-size:13px;color:var(--muted);flex-shrink:0;margin-right:12px}
+  .profile-val{font-size:15px;font-weight:600;text-align:right}
+  .stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px}
+  .stat-box{background:#f6f8fb;border-radius:14px;padding:12px 6px;text-align:center;border:1px solid var(--border)}
+  .stat-box.accent{background:#eef3ff;border-color:#c7d7ff}
+  .stat-num{font-size:20px;font-weight:800;color:var(--primary-dark)}
+  .stat-label{font-size:11px;color:var(--muted);margin-top:4px}
+  .charts-row{display:grid;grid-template-columns:1fr 2fr;gap:16px;margin-top:4px}
+  .chart-wrap{position:relative;min-height:180px}
+
+  /* 共有資料 */
+  .doc-item{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:14px;background:#fff;text-decoration:none;color:var(--text);margin-bottom:8px}
+  .doc-item:last-child{margin-bottom:0}
+  .doc-item:active{background:#f0f4ff}
+  .doc-icon{font-size:22px;flex-shrink:0}
+  .doc-info{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
+  .doc-name{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .doc-date{font-size:12px}
+  .doc-arrow{font-size:20px;color:var(--muted);flex-shrink:0}
+
+  /* スコア入力 */
+  .score-row{display:flex;align-items:center;gap:10px;margin:8px 0;flex-wrap:wrap}
+  .score-team{font-weight:700;font-size:14px;min-width:70px}
+  .score-vs{font-weight:700;font-size:18px}
+  .score-input{width:60px;padding:10px;border-radius:10px;border:1px solid var(--border);font-size:18px;font-weight:700;text-align:center}
+
+  /* 勝率テーブル */
+  .wr-table{width:100%;border-collapse:collapse;font-size:14px}
+  .wr-table th,.wr-table td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:center}
+  .wr-table th{background:#f0f4ff;color:var(--primary-dark);font-size:12px}
+  .wr-table td:first-child{text-align:left;font-weight:600}
+
+  @media(max-width:700px){
+    .section-head,.session-header{flex-direction:column;align-items:stretch}
+    .status-block{justify-items:start}
+    .actions{justify-content:stretch} button{width:100%}
+    .teams-grid{grid-template-columns:1fr}
+    .charts-row{grid-template-columns:1fr}
+  }

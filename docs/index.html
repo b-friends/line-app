@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Bフレンズ</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+
+  <header class="app-header">
+    <span class="app-header-title">Bフレンズ ソフトバレー</span>
+    <span class="app-header-name" id="headerName">…</span>
+  </header>
+
+  <div class="container">
+
+    <!-- 参加予定ページ -->
+    <div id="page-schedule" class="page hidden">
+      <section class="card" id="scheduleCard">
+        <div class="section-head"><h2>参加予定</h2><div class="muted" id="lastSavedAt">未保存</div></div>
+        <div id="scheduleRoot" class="schedule-root"></div>
+        <div class="actions sticky-actions"><button class="primary" id="saveButton">参加予定を保存</button></div>
+      </section>
+      <section class="card hidden" id="adminCard">
+        <div class="section-head"><h2>当日参加チェック（管理者）</h2></div>
+        <div id="adminRoot"></div>
+      </section>
+    </div>
+
+    <!-- チーム編成ページ -->
+    <div id="page-teams" class="page hidden">
+      <section class="card" id="teamCard">
+        <h2>チーム編成</h2>
+        <div class="form-grid">
+          <label><span>対象の予定</span><select id="teamSessionSelect"></select></label>
+        </div>
+        <div id="teamPlayerList" class="team-player-list"></div>
+        <div class="actions">
+          <button class="primary" id="generateTeamsBtn">第<span id="gameNumberLabel">1</span>ゲームのチーム編成</button>
+          <button class="secondary hidden" id="exportListBtn">参加者リスト出力</button>
+        </div>
+        <div id="teamResult" class="team-result"></div>
+      </section>
+      <section class="card hidden" id="resultCard">
+        <h2>試合結果入力</h2>
+        <p class="muted">各ゲームのスコアを入力して保存すると、個人勝率に反映されます。</p>
+        <div id="resultRoot"></div>
+        <div class="actions"><button class="primary" id="saveResultsBtn">結果を保存</button></div>
+      </section>
+      <section class="card" id="winRateCard">
+        <div class="section-head"><h2>個人勝率</h2><button class="secondary" id="refreshWinRateBtn">更新</button></div>
+        <div id="winRateRoot"></div>
+      </section>
+    </div>
+
+    <!-- 登録ページ（管理者代理登録） -->
+    <div id="page-register" class="page hidden">
+      <section class="card" id="registerCard">
+        <h2>代理登録</h2>
+        <div id="registerMemberView">
+          <p class="muted">登録済みです。管理者は代理登録ができます。</p>
+        </div>
+        <div id="adminRegisterPane" class="hidden">
+          <p class="muted">知っている情報のみ入力してください。氏名のみ必須です。</p>
+          <div class="form-grid">
+            <label><span>氏名（必須）</span><input type="text" id="adminRegFullName" placeholder="例: 山田 太郎"/></label>
+            <label><span>ふりがな</span><input type="text" id="adminRegFurigana" placeholder="例: やまだ たろう"/></label>
+            <label><span>性別</span><select id="adminRegGender"><option value="">選択…</option><option value="男">男</option><option value="女">女</option></select></label>
+            <label><span>生年月日</span><input type="date" id="adminRegBirthDate"/></label>
+            <label><span>携帯電話</span><input type="tel" id="adminRegMobilePhone" placeholder="090-xxxx-xxxx"/></label>
+            <label class="full-width"><span>住所</span><input type="text" id="adminRegAddress"/></label>
+          </div>
+          <div class="actions"><button class="primary" id="adminRegBtn">代理登録する</button></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- マイページ -->
+    <div id="page-mypage" class="page hidden">
+      <section class="card">
+        <h2>戦績</h2>
+        <div id="myStatsRoot"></div>
+        <div class="charts-row">
+          <div class="chart-wrap"><canvas id="chartDonut"></canvas></div>
+          <div class="chart-wrap"><canvas id="chartLine"></canvas></div>
+        </div>
+      </section>
+      <section class="card">
+        <div class="section-head"><h2>プロフィール</h2><button class="secondary" id="editProfileBtn">編集</button></div>
+        <div id="profileView"></div>
+        <div id="profileEdit" class="hidden">
+          <div class="form-grid">
+            <label><span>氏名（必須）</span><input type="text" id="editFullName"/></label>
+            <label><span>ふりがな（必須）</span><input type="text" id="editFurigana"/></label>
+            <label><span>性別（必須）</span><select id="editGender"><option value="男">男</option><option value="女">女</option></select></label>
+            <label><span>生年月日（必須）</span><input type="date" id="editBirthDate"/></label>
+            <label><span>携帯電話（必須）</span><input type="tel" id="editMobilePhone"/></label>
+            <label class="full-width"><span>住所（必須）</span><input type="text" id="editAddress"/></label>
+            <label><span>自宅電話（任意）</span><input type="tel" id="editHomePhone"/></label>
+          </div>
+          <div class="actions">
+            <button class="secondary" id="cancelProfileBtn">キャンセル</button>
+            <button class="primary" id="saveProfileBtn">保存する</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- 管理ページ -->
+    <div id="page-admin" class="page hidden">
+      <section class="card" id="adminPageCard">
+        <p class="muted" id="adminAccessMsg"></p>
+      </section>
+
+      <!-- 候補日管理 -->
+      <section class="card hidden" id="adminScheduleCard">
+        <h2>候補日管理</h2>
+        <div class="form-grid">
+          <label><span>月を選択</span><input type="month" id="adminMonthPicker"/></label>
+        </div>
+        <div class="actions"><button class="secondary" id="adminLoadSaturdaysBtn">土曜日一覧を表示</button></div>
+        <div id="adminSaturdayList" class="saturday-list"></div>
+        <div class="actions hidden" id="adminRegisterDatesActions">
+          <button class="primary" id="adminRegisterDatesBtn">選択した日程を登録</button>
+        </div>
+        <div id="adminExistingSchedule" style="margin-top:16px"></div>
+      </section>
+
+      <!-- 活動報告書 -->
+      <section class="card hidden" id="adminReportCard">
+        <h2>活動報告書生成</h2>
+        <div class="form-grid">
+          <label><span>対象月</span><input type="month" id="adminReportMonth"/></label>
+        </div>
+        <div class="actions"><button class="primary" id="adminGenerateReportBtn">報告書を生成</button></div>
+      </section>
+    </div>
+
+    <!-- 共有資料ページ -->
+    <div id="page-docs" class="page hidden">
+      <section class="card" id="docsCard">
+        <div class="section-head"><h2>共有資料</h2><button class="secondary" id="refreshDocsBtn">更新</button></div>
+        <div id="docsRoot"></div>
+      </section>
+    </div>
+
+    <!-- メッセージ（全ページ共通） -->
+    <section class="card" id="messageCard">
+      <div id="messageArea" class="message info">初期化を開始します。</div>
+    </section>
+
+  </div>
+
+<!-- 初回登録モーダル -->
+<div id="modalOverlay" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h2 id="modalTitle">はじめに登録してください</h2>
+    <p class="muted" id="modalDesc">氏名またはふりがなで検索して名簿と紐付けてください。名簿にない方は新規登録へ進んでください。</p>
+
+    <!-- 紐付けパネル -->
+    <div id="modalLinkPane">
+      <div class="form-grid">
+        <label class="full-width"><span>氏名またはふりがなで検索（2文字以上）</span>
+          <input type="text" id="modalNameSearch" placeholder="例: 山田 または やまだ" autocomplete="off"/>
+        </label>
+      </div>
+      <div class="name-list hidden" id="modalNameList"></div>
+      <div id="modalSelectedName" style="margin-top:10px;font-size:16px;font-weight:700"></div>
+      <div class="actions">
+        <button class="secondary" id="modalToNewBtn">名簿にない方はこちら</button>
+        <button class="primary" id="modalLinkBtn" disabled>この名前で登録する</button>
+      </div>
+    </div>
+
+    <!-- 新規登録パネル -->
+    <div id="modalNewPane" class="hidden">
+      <div class="form-grid">
+        <label><span>氏名（必須）</span><input type="text" id="mNewFullName" placeholder="例: 山田 太郎"/></label>
+        <label><span>ふりがな（必須）</span><input type="text" id="mNewFurigana" placeholder="例: やまだ たろう"/></label>
+        <label><span>性別（必須）</span><select id="mNewGender"><option value="">選択…</option><option value="男">男</option><option value="女">女</option></select></label>
+        <label><span>生年月日（必須）</span><input type="date" id="mNewBirthDate"/></label>
+        <label><span>携帯電話（必須）</span><input type="tel" id="mNewMobilePhone" placeholder="090-xxxx-xxxx"/></label>
+        <label class="full-width"><span>住所（必須）</span><input type="text" id="mNewAddress" placeholder="例: 東京都〇〇区…"/></label>
+      </div>
+      <div class="actions">
+        <button class="secondary" id="modalBackBtn">戻る</button>
+        <button class="primary" id="modalNewBtn">新規登録する</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
