@@ -855,11 +855,11 @@ function updateActivityReport_(sessionId) {
 
   // 該当開催日の行を探す（dayLabelで比較）
   let targetRow = -1;
-  const col1 = rSheet.getRange(4, 1, 6, 1).getValues();
+  const col1 = rSheet.getRange(4, 1, 6, 1).getDisplayValues();
   col1.forEach((v, i) => { if (String(v[0]).trim() === dayLabel) targetRow = i + 4; });
   if (targetRow < 0) {
-    // 空行を探して挿入
-    col1.forEach((v, i) => { if (targetRow < 0 && String(v[0]).trim() === '') targetRow = i + 4; });
+    const col1e = rSheet.getRange(4, 1, 6, 1).getDisplayValues();
+    col1e.forEach((v, i) => { if (targetRow < 0 && String(v[0]).trim() === '') targetRow = i + 4; });
   }
   if (targetRow < 0) targetRow = 4; // フォールバック
 
@@ -868,7 +868,7 @@ function updateActivityReport_(sessionId) {
   // 計行（10行目）を再計算
   const totals = Array(11).fill(0);
   for (let row = 4; row < keRow; row++) {
-    const vals = rSheet.getRange(row, 2, 1, 11).getValues()[0];
+    const vals = rSheet.getRange(row, 2, 1, 11).getDisplayValues()[0];
     vals.forEach((v, i) => { totals[i] += Number(v) || 0; });
   }
   rSheet.getRange(keRow, 2, 1, 11).setValues([totals]);
