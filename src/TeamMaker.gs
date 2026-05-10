@@ -200,10 +200,10 @@ function suggestRest(allPlayers) {
   const restCount = n - playCount;
   if (restCount <= 0) return [];
 
-  // 体験者は最後に休憩候補、同一参加回数内はランダム
+  // 体験者は最後に休憩候補、在席参加率が高い人を優先的に休憩候補
   const sorted = allPlayers.slice().sort((a, b) => {
     if (a.isTrial !== b.isTrial) return a.isTrial ? 1 : -1;
-    return b.playCount - a.playCount;
+    return b.attendanceRate - a.attendanceRate;
   });
 
   return sorted.slice(0, restCount).map(p => p.lineId);

@@ -479,22 +479,36 @@ function suggestRestAction(payload) {
   const memberMap = {};
   members.forEach(m => { if (m[MC.LINE_ID]) memberMap[m[MC.LINE_ID]] = m; });
 
-  // GameSetsから当日の参加回数を集計
+  // GameSetsからゲーム番号ごとのcreatedAtを取得（ゲーム開始時刻）
   const gsRows = readObjects_(opsSS.getSheetByName(SHEET_NAMES.GAMESETS))
     .filter(r => r.sessionId === sessionId);
-  const playCount = {};
-  gsRows.forEach(r => { playCount[r.fullName] = (playCount[r.fullName] || 0) + 1; });
+  // ゲーム番号ごとの開始時刻（同ゲーム内の最小値）
+  const gameStartTime = {};
+  gsRows.forEach(r => {
+    const t = new Date(r.createdAt).getTime();
+    if (!gameStartTime[r.gameNumber] || t < gameStartTime[r.gameNumber]) {
+      gameStartTime[r.gameNumber] = t;
+    }
+  });
+  const gameNumbers = Object.keys(gameStartTime).map(Number).sort((a, b) => a - b);
 
   const allPlayers = attendees.map(a => {
     const m = memberMap[a.lineId] || {};
+    const joinTime = new Date(a.submittedAt).getTime();
+    // 在席可能ゲーム数：参加登録後に開始したゲーム数
+    const eligibleGames = gameNumbers.filter(g => gameStartTime[g] >= joinTime).length;
+    // 実際の参加ゲーム数
+    const playedGames = gsRows.filter(r => r.fullName === a.fullName).length;
+    // 在席参加率：在席可能ゲームが0なら、1.0とする（新規到着者は中立評価）
+    const attendanceRate = eligibleGames > 0 ? playedGames / eligibleGames : 1.0;
     return {
       lineId: a.lineId,
       fullName: a.fullName,
       isTrial: String(m[MC.STATUS] || '').trim() === '体験',
-      playCount: playCount[a.fullName] || 0,
+      attendanceRate,
     };
   });
-  return { ok: true, suggestedRestIds: suggestRest(allPlayers) };
+  return { ok: true, suggestedRestIds: suggestRest(allPlayers), playerStats: allPlayers.map(p => ({ lineId: p.lineId, attendanceRate: p.attendanceRate, isTrial: p.isTrial })) };
 }
 
 function getLatestGameNumber(payload) {

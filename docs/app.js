@@ -477,6 +477,7 @@ function renderAdmin(months) {
 let _currentGameNumber = 1;
 let _currentSessionId = '';
 let _loadingTeam = false;
+let _playerStats = [];
 
 function populateTeamSelect() {
   const sel = el('teamSessionSelect');
@@ -537,6 +538,7 @@ async function loadTeamPlayerList() {
   // 休憩者自動提案を取得
   const r = await api('suggestRest', { idToken: S.idToken, sessionId });
   const suggestedRestIds = r.ok ? r.suggestedRestIds : [];
+  _playerStats = r.ok ? (r.playerStats || []) : [];
 
   // 参加者一覧を構築
   const session = (S.schedule||[]).flatMap(m => m.sessions).find(s => s.sessionId === sessionId);
@@ -559,8 +561,24 @@ async function loadTeamPlayerList() {
 async function doGenerateTeams() {
   const sessionId = el('teamSessionSelect').value;
   if (!sessionId) { showMsg('予定を選択してください。', 'error'); return; }
-  const checkedIds = Array.from(el('teamPlayerList').querySelectorAll('.player-check:checked')).map(i => i.value);
+  let checkedIds = Array.from(el('teamPlayerList').querySelectorAll('.player-check:checked')).map(i => i.value);
   const allIds = Array.from(el('teamPlayerList').querySelectorAll('.player-check')).map(i => i.value);
+
+  // 人数超過時は在席参加率が高い順に自動休憩
+  const maxPlay = checkedIds.length >= 13 ? 16 : 8;
+  if (checkedIds.length > maxPlay) {
+    const overCount = checkedIds.length - maxPlay;
+    const sorted = checkedIds
+      .map(id => _playerStats.find(p => p.lineId === id) || { lineId: id, attendanceRate: 1, isTrial: false })
+      .sort((a, b) => a.isTrial !== b.isTrial ? (a.isTrial ? -1 : 1) : b.attendanceRate - a.attendanceRate);
+    const autoRest = sorted.slice(0, overCount).map(p => p.lineId);
+    autoRest.forEach(id => {
+      const cb = el('teamPlayerList').querySelector('.player-check[value="' + id + '"]');
+      if (cb) cb.checked = false;
+    });
+    checkedIds = checkedIds.filter(id => !autoRest.includes(id));
+  }
+
   const restLineIds = allIds.filter(id => !checkedIds.includes(id));
   disableAll(true);
   const r = await api('generateTeams', { idToken: S.idToken, sessionId, gameNumber: _currentGameNumber, restLineIds });
