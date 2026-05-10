@@ -604,22 +604,25 @@ function calcWinRates_() {
   const grRows = readObjects_(opsSS.getSheetByName(SHEET_NAMES.GAMERESULTS));
 
   const resultMap = {};
-  grRows.forEach(r => { resultMap[r.sessionId + '|' + r.gameNumber] = r; });
+  grRows.forEach(r => { resultMap[r.sessionId + '|' + r.gameNumber + '|' + r.teamA + '|' + r.teamB] = r; });
 
   const stats = {};
   gsRows.forEach(row => {
-    const result = resultMap[row.sessionId + '|' + row.gameNumber];
-    if (!result) return;
+    const res = Object.values(resultMap).find(r =>
+      r.sessionId === row.sessionId && String(r.gameNumber) === String(row.gameNumber) &&
+      (r.teamA === row.teamName || r.teamB === row.teamName)
+    );
+    if (!res) return;
     const name = row.fullName;
     if (!stats[name]) stats[name] = { wins: 0, losses: 0, draws: 0, games: 0, scoreDiffSum: 0 };
     stats[name].games++;
-    const scoreA = Number(result.scoreA) || 0;
-    const scoreB = Number(result.scoreB) || 0;
-    const myScore  = row.teamName === result.teamA ? scoreA : scoreB;
-    const oppScore = row.teamName === result.teamA ? scoreB : scoreA;
+    const scoreA = Number(res.scoreA) || 0;
+    const scoreB = Number(res.scoreB) || 0;
+    const myScore  = row.teamName === res.teamA ? scoreA : scoreB;
+    const oppScore = row.teamName === res.teamA ? scoreB : scoreA;
     stats[name].scoreDiffSum += myScore - oppScore;
-    if (result.winTeam === 'draw') stats[name].draws++;
-    else if (result.winTeam === row.teamName) stats[name].wins++;
+    if (res.winTeam === 'draw') stats[name].draws++;
+    else if (res.winTeam === row.teamName) stats[name].wins++;
     else stats[name].losses++;
   });
 
@@ -657,12 +660,23 @@ function getMyPage(idToken) {
   const gsRows = readObjects_(opsSS.getSheetByName(SHEET_NAMES.GAMESETS));
   const grRows = readObjects_(opsSS.getSheetByName(SHEET_NAMES.GAMERESULTS));
   const resultMap = {};
-  grRows.forEach(r => { resultMap[r.sessionId + '|' + r.gameNumber] = r; });
+  grRows.forEach(r => { resultMap[r.sessionId + '|' + r.gameNumber + '|' + r.teamA + '|' + r.teamB] = r; });
   const myGames = gsRows
-    .filter(r => r.fullName === member[MC.FULL_NAME] && resultMap[r.sessionId + '|' + r.gameNumber])
+    .filter(r => r.fullName === member[MC.FULL_NAME])
+    .filter(r => {
+      // 自分のチームの結果を探す
+      const key = Object.keys(resultMap).find(k =>
+        k.startsWith(r.sessionId + '|' + r.gameNumber + '|') &&
+        (resultMap[k].teamA === r.teamName || resultMap[k].teamB === r.teamName)
+      );
+      return !!key;
+    })
     .slice(-10)
     .map(r => {
-      const res = resultMap[r.sessionId + '|' + r.gameNumber];
+      const res = Object.values(resultMap).find(rr =>
+        rr.sessionId === r.sessionId && String(rr.gameNumber) === String(r.gameNumber) &&
+        (rr.teamA === r.teamName || rr.teamB === r.teamName)
+      );
       const outcome = res.winTeam === 'draw' ? 'draw' : res.winTeam === r.teamName ? 'win' : 'loss';
       const myScore  = r.teamName === res.teamA ? Number(res.scoreA) : Number(res.scoreB);
       const oppScore = r.teamName === res.teamA ? Number(res.scoreB) : Number(res.scoreA);
