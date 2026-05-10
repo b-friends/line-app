@@ -94,6 +94,9 @@ async function loadSession() {
 
     if (r.memberFound && r.member) {
       if (page !== 'teams') hide('messageCard');
+      // 必須項目チェック用にプロフィールを取得
+      const mp = await api('getMyPage', { idToken: S.idToken });
+      if (mp.ok) { S.myPageData = mp; S.member = { ...S.member, ...mp.profile }; }
       if (page === 'schedule') {
         renderSchedule(r.schedule || []);
         if (r.isAdmin) { show('adminCard'); loadAdminView(); }
@@ -181,8 +184,8 @@ function filterModalNames() {
 }
 
 function checkRequiredFields() {
-  const m = S.member;
-  return !!(m && m.furigana && m.gender && m.birthDate && m.mobilePhone && m.address);
+  const p = (S.myPageData && S.myPageData.profile) || S.member;
+  return !!(p && p.furigana && p.gender && p.birthDate && p.mobilePhone && p.address);
 }
 
 function redirectToMypageEdit() {
