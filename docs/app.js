@@ -366,6 +366,8 @@ function renderSchedule(months) {
   const root = el('scheduleRoot');
   root.innerHTML = '';
   if (!months.length) { root.innerHTML = '<p class="muted">現在回答可能な予定はありません。</p>'; return; }
+  const hasAnswer = months.some(m => m.sessions.some(s => s.myAnswer && s.myAnswer !== 'undecided'));
+  if (hasAnswer) el('lastSavedAt').textContent = '';
   const today = new Date().toISOString().slice(0, 10);
   months.forEach(month => {
     const sec = document.createElement('section');
