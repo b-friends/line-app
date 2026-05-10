@@ -182,7 +182,7 @@ function filterModalNames() {
 
 function checkRequiredFields() {
   const p = (S.myPageData && S.myPageData.profile) || S.member;
-  return !!(p && p.furigana && p.gender && p.mobilePhone && p.address);
+  return !!(p && p.furigana && p.gender && p.birthDate && p.mobilePhone && p.address);
 }
 
 function redirectToMypageEdit() {
@@ -349,7 +349,6 @@ async function loadMemberNames() {
 // ── 出欠保存 ──
 async function doSave() {
   if (!S.member) { showMsg('先に登録を完了してください。', 'error'); return; }
-  if (!checkRequiredFields()) { redirectToMypageEdit(); return; }
   disableAll(true);
   const r = await api('submitAvailability', { idToken: S.idToken, answers: collectAnswers() });
   disableAll(false);
@@ -541,7 +540,6 @@ async function loadTeamPlayerList() {
 }
 
 async function doGenerateTeams() {
-  if (!checkRequiredFields()) { redirectToMypageEdit(); return; }
   const sessionId = el('teamSessionSelect').value;
   if (!sessionId) { showMsg('予定を選択してください。', 'error'); return; }
   const checkedIds = Array.from(el('teamPlayerList').querySelectorAll('.player-check:checked')).map(i => i.value);
@@ -607,7 +605,6 @@ function renderResultInputs(game) {
 }
 
 async function doSaveResults() {
-  if (!checkRequiredFields()) { redirectToMypageEdit(); return; }
   const sessionId = el('teamSessionSelect').value;
   if (!sessionId) { showMsg('予定を選択してください。', 'error'); return; }
   const inputs = document.querySelectorAll('.score-input');

@@ -162,7 +162,7 @@ function initializeSession(idToken) {
       no: member[MC.NO], fullName: member[MC.FULL_NAME],
       gender: member[MC.GENDER], ageApril1: member[MC.AGE_APRIL1],
       furigana: member[MC.FURIGANA], mobilePhone: member[MC.MOBILE_PHONE],
-      address: member[MC.ADDRESS], lineId: profile.sub,
+      address: member[MC.ADDRESS], birthDate: member[MC.BIRTH_DATE], lineId: profile.sub,
     } : null,
     lineProfileName: profile.name || '',
     schedule,
