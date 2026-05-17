@@ -1026,6 +1026,25 @@ function findOrInsertReportRow_(sheet, dayLabel) {
   return keRow;
 }
 
+// 報告書のデータ行を開催日（A列）の昇順にソートし、空行を末尾へ移動する
+function sortReportRows_(sheet) {
+  const keRow = findReportTotalRow_(sheet);
+  const dataRows = keRow - REPORT_DATA_START_ROW_;
+  if (dataRows <= 1) return;
+  const numCols = sheet.getLastColumn();
+  const range = sheet.getRange(REPORT_DATA_START_ROW_, 1, dataRows, numCols);
+  const values = range.getValues();
+  values.sort((a, b) => {
+    const da = String(a[0]).trim();
+    const db = String(b[0]).trim();
+    if (!da && !db) return 0;
+    if (!da) return 1;
+    if (!db) return -1;
+    return da.localeCompare(db);
+  });
+  range.setValues(values);
+}
+
 function generateActivityReport(payload) {
   const profile = verifyIdToken_(payload.idToken);
   ensureAdmin_(profile.sub);
@@ -1059,6 +1078,9 @@ function exportActivityReport(payload) {
   const opsSS = getOpsSS_();
   const rSheet = opsSS.getSheetByName(reportName);
   if (!rSheet) throw new Error(monthKey + ' の活動報告書がありません。先に「報告書を生成」してください。');
+
+  // 開催日順にソートしてからPDF化
+  sortReportRows_(rSheet);
 
   // スプレッドシート export URL でシート単体をPDF化
   const exportUrl =
