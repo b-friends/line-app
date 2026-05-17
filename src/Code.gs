@@ -103,6 +103,7 @@ function handleRequest_(action, params) {
       case 'addScheduleSessions':      result = addScheduleSessions(params); break;
       case 'deleteScheduleSession':    result = deleteScheduleSession(params); break;
       case 'generateActivityReport':   result = generateActivityReport(params); break;
+      case 'exportActivityReport':     result = exportActivityReport(params); break;
       default:                        result = { ok: false, message: 'Unknown action: ' + action };
     }
     return jsonResponse_(result);
@@ -840,6 +841,8 @@ function deleteScheduleSession(payload) {
 
 // ── 活動報告書自動更新 ──
 
+const REPORT_DATA_START_ROW_ = 4;
+
 function updateActivityReport_(sessionId) {
   const opsSS = getOpsSS_();
   const schedMap = getScheduleMap_();
@@ -891,34 +894,63 @@ function updateActivityReport_(sessionId) {
     rSheet.setName(reportName);
     const monthLabel = monthKey.replace(/(\d+)-(\d+)/, (_, y, m) => y + '年' + Number(m) + '月');
     rSheet.getRange('A1').setValue(monthLabel);
-    rSheet.getRange(4, 1, 6, 12).clearContent();
-    rSheet.getRange(4, 1, 6, 1).setNumberFormat('@STRING@');
+    const initKeRow = findReportTotalRow_(rSheet);
+    if (initKeRow > REPORT_DATA_START_ROW_) {
+      const dataRows = initKeRow - REPORT_DATA_START_ROW_;
+      rSheet.getRange(REPORT_DATA_START_ROW_, 1, dataRows, 12).clearContent();
+      rSheet.getRange(REPORT_DATA_START_ROW_, 1, dataRows, 1).setNumberFormat('@STRING@');
+    }
   }
 
-  // 計行は常に10行目固定
-  const keRow = 10;
+  // 該当開催日の行を探し、空きがなければ合計行の直前に行を挿入
+  const targetRow = findOrInsertReportRow_(rSheet, dayLabel);
+  // 行挿入で合計行が移動した可能性があるため再検索
+  const keRow = findReportTotalRow_(rSheet);
 
-  // 該当開催日の行を探す（dayLabelで比較）
-  let targetRow = -1;
-  const col1 = rSheet.getRange(4, 1, 6, 1).getDisplayValues();
-  col1.forEach((v, i) => { if (String(v[0]).trim() === dayLabel) targetRow = i + 4; });
-  if (targetRow < 0) {
-    const col1e = rSheet.getRange(4, 1, 6, 1).getDisplayValues();
-    col1e.forEach((v, i) => { if (targetRow < 0 && String(v[0]).trim() === '') targetRow = i + 4; });
-  }
-  if (targetRow < 0) targetRow = 4;
-
-  // A列を文字列書式に設定してから書き込む
   rSheet.getRange(targetRow, 1).setNumberFormat('@STRING@').setValue(dayLabel);
   rSheet.getRange(targetRow, 2, 1, 11).setValues([[...counts, total]]);
 
-  // 計行（10行目）を再計算
+  // 合計を再計算
   const totals = Array(11).fill(0);
-  for (let row = 4; row < keRow; row++) {
+  for (let row = REPORT_DATA_START_ROW_; row < keRow; row++) {
     const vals = rSheet.getRange(row, 2, 1, 11).getDisplayValues()[0];
     vals.forEach((v, i) => { totals[i] += Number(v) || 0; });
   }
   rSheet.getRange(keRow, 2, 1, 11).setValues([totals]);
+}
+
+// A列に「計」がある行番号を返す。見つからない場合は末尾の次行
+function findReportTotalRow_(sheet) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < REPORT_DATA_START_ROW_) return REPORT_DATA_START_ROW_;
+  const col1 = sheet.getRange(REPORT_DATA_START_ROW_, 1, lastRow - REPORT_DATA_START_ROW_ + 1, 1).getDisplayValues();
+  for (let i = 0; i < col1.length; i++) {
+    if (String(col1[i][0]).trim() === '計') return REPORT_DATA_START_ROW_ + i;
+  }
+  return lastRow + 1;
+}
+
+// データ範囲で開催日ラベルの行・空行を探す。なければ合計行の直前に行を挿入して返す
+function findOrInsertReportRow_(sheet, dayLabel) {
+  const keRow = findReportTotalRow_(sheet);
+  const dataRows = keRow - REPORT_DATA_START_ROW_;
+  if (dataRows > 0) {
+    const col1 = sheet.getRange(REPORT_DATA_START_ROW_, 1, dataRows, 1).getDisplayValues();
+    for (let i = 0; i < col1.length; i++) {
+      if (String(col1[i][0]).trim() === dayLabel) return REPORT_DATA_START_ROW_ + i;
+    }
+    for (let i = 0; i < col1.length; i++) {
+      if (String(col1[i][0]).trim() === '') return REPORT_DATA_START_ROW_ + i;
+    }
+  }
+  // 空きなし: 合計行の直前に新規行を挿入して書式を引き継ぐ
+  sheet.insertRowBefore(keRow);
+  if (keRow > REPORT_DATA_START_ROW_) {
+    sheet.getRange(keRow - 1, 1, 1, sheet.getLastColumn())
+      .copyTo(sheet.getRange(keRow, 1, 1, sheet.getLastColumn()),
+              SpreadsheetApp.CopyPasteType.PASTE_FORMAT, false);
+  }
+  return keRow;
 }
 
 function generateActivityReport(payload) {
@@ -934,6 +966,69 @@ function generateActivityReport(payload) {
   const reportName = 'Report_' + ym;
   const url = getOpsSS_().getUrl() + '#gid=' + (getOpsSS_().getSheetByName(reportName) || {}).getSheetId();
   return { ok: true, message: monthKey + 'の活動報告書を生成しました。', sheetName: reportName };
+}
+
+// ── 活動報告書 PDF出力 ──
+
+function exportActivityReport(payload) {
+  const profile = verifyIdToken_(payload.idToken);
+  ensureAdmin_(profile.sub);
+  const monthKey = String(payload.monthKey || '');
+  if (!monthKey) throw new Error('月を指定してください。');
+
+  // 最新データで報告書を再生成
+  const schedMap = getScheduleMap_();
+  Object.values(schedMap).filter(s => s.monthKey === monthKey)
+    .forEach(s => updateActivityReport_(s.sessionId));
+
+  const ym = monthKey.replace('-', '');
+  const reportName = 'Report_' + ym;
+  const opsSS = getOpsSS_();
+  const rSheet = opsSS.getSheetByName(reportName);
+  if (!rSheet) throw new Error(monthKey + ' の活動報告書がありません。先に「報告書を生成」してください。');
+
+  // スプレッドシート export URL でシート単体をPDF化
+  const exportUrl =
+    'https://docs.google.com/spreadsheets/d/' + opsSS.getId() + '/export' +
+    '?format=pdf' +
+    '&gid=' + rSheet.getSheetId() +
+    '&portrait=true' +
+    '&fitw=true' +
+    '&size=A4' +
+    '&top_margin=0.50&bottom_margin=0.50&left_margin=0.50&right_margin=0.50' +
+    '&gridlines=false&printtitle=false&sheetnames=false&pagenum=UNDEFINED';
+
+  const pdfBlob = UrlFetchApp.fetch(exportUrl, {
+    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+  }).getBlob().setName(reportName + '.pdf');
+
+  // 同名ファイルを上書き（古いものをゴミ箱へ）
+  const folder = getPdfFolder_();
+  const it = folder.getFilesByName(reportName + '.pdf');
+  while (it.hasNext()) it.next().setTrashed(true);
+
+  const file = folder.createFile(pdfBlob);
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+  return {
+    ok: true,
+    url: 'https://drive.google.com/file/d/' + file.getId() + '/view',
+    filename: reportName + '.pdf',
+    message: monthKey + ' の活動報告書PDFを生成しました。',
+  };
+}
+
+// PDF保存フォルダを取得または作成（運用スプレッドシートの親フォルダ内）
+function getPdfFolder_() {
+  const prop = PropertiesService.getScriptProperties().getProperty('PDF_FOLDER_ID');
+  if (prop) {
+    try { return DriveApp.getFolderById(prop); } catch (e) {}
+  }
+  const parents = DriveApp.getFileById(getOpsSS_().getId()).getParents();
+  const parent = parents.hasNext() ? parents.next() : DriveApp.getRootFolder();
+  const folder = parent.createFolder('活動報告書PDF');
+  PropertiesService.getScriptProperties().setProperty('PDF_FOLDER_ID', folder.getId());
+  return folder;
 }
 
 // ── 管理者代理登録 ──
@@ -1130,7 +1225,14 @@ function appendRow_(sheet, headers, obj) {
 }
 
 function appendRowRaw_(sheet, headers, rowValues) {
-  const rowNum = sheet.getLastRow() + 1;
+  const lastRow = sheet.getLastRow();
+  const rowNum = lastRow + 1;
+  if (lastRow >= 2) {
+    const src = sheet.getRange(lastRow, 1, 1, headers.length);
+    const dst = sheet.getRange(rowNum, 1, 1, headers.length);
+    src.copyTo(dst, SpreadsheetApp.CopyPasteType.PASTE_FORMAT, false);
+    src.copyTo(dst, SpreadsheetApp.CopyPasteType.PASTE_DATA_VALIDATION, false);
+  }
   PHONE_COLS_.forEach(col => {
     const ci = headers.indexOf(col);
     if (ci >= 0) sheet.getRange(rowNum, ci + 1).setNumberFormat('@STRING@');

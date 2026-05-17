@@ -62,6 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
   el('adminLoadSaturdaysBtn').addEventListener('click', loadSaturdays);
   el('adminRegisterDatesBtn').addEventListener('click', doRegisterDates);
   el('adminGenerateReportBtn').addEventListener('click', doGenerateReport);
+  el('adminExportPdfBtn').addEventListener('click', doExportReportPdf);
   // モーダル
   el('modalNameSearch').addEventListener('input', filterModalNames);
   el('modalLinkBtn').addEventListener('click', doModalLink);
@@ -322,6 +323,18 @@ async function doGenerateReport() {
   const r = await api('generateActivityReport', { idToken: S.idToken, monthKey });
   disableAll(false);
   showMsg(r.ok ? r.message + 'スプレッドシートの ' + esc(r.sheetName) + ' を確認してください。' : r.message, r.ok ? 'success' : 'error');
+}
+
+async function doExportReportPdf() {
+  const monthKey = el('adminReportMonth').value;
+  if (!monthKey) { showMsg('対象月を選択してください。', 'error'); return; }
+  disableAll(true);
+  showMsg('PDF生成中…', 'info');
+  const r = await api('exportActivityReport', { idToken: S.idToken, monthKey });
+  disableAll(false);
+  if (!r.ok) { showMsg(r.message, 'error'); return; }
+  showMsg(r.message, 'success');
+  liff.openWindow({ url: r.url, external: true });
 }
 
 // ── 管理者代理登録 ──

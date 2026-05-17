@@ -130,11 +130,14 @@
 
       <!-- 活動報告書 -->
       <section class="card hidden" id="adminReportCard">
-        <h2>活動報告書生成</h2>
+        <h2>活動報告書</h2>
         <div class="form-grid">
           <label><span>対象月</span><input type="month" id="adminReportMonth"/></label>
         </div>
-        <div class="actions"><button class="primary" id="adminGenerateReportBtn">報告書を生成</button></div>
+        <div class="actions">
+          <button class="secondary" id="adminGenerateReportBtn">データ更新</button>
+          <button class="primary" id="adminExportPdfBtn">PDF出力</button>
+        </div>
       </section>
     </div>
 
