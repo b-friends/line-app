@@ -579,7 +579,7 @@ async function doGenerateTeams() {
   const allIds = Array.from(el('teamPlayerList').querySelectorAll('.player-check')).map(i => i.value);
 
   // 人数超過時は在席参加率が高い順に自動休憩（体験者は最後に休憩）
-  const numTeams = checkedIds.length >= 12 ? 4 : 2;
+  const numTeams = checkedIds.length >= 13 ? 4 : 2;
   const maxPlay = numTeams * 4;
   if (checkedIds.length > maxPlay) {
     const overCount = checkedIds.length - maxPlay;
