@@ -609,14 +609,19 @@ function calcWinRates_() {
   const gsRows = readObjects_(opsSS.getSheetByName(SHEET_NAMES.GAMESETS));
   const grRows = readObjects_(opsSS.getSheetByName(SHEET_NAMES.GAMERESULTS));
 
-  const resultMap = {};
-  grRows.forEach(r => { resultMap[r.sessionId + '|' + r.gameNumber + '|' + r.teamA + '|' + r.teamB] = r; });
+  // sessionId|gameNumber をキーにしてO(1)参照できるようにする（O(n*m)バグの修正）
+  const resultsByGame = {};
+  grRows.forEach(r => {
+    const key = r.sessionId + '|' + r.gameNumber;
+    if (!resultsByGame[key]) resultsByGame[key] = [];
+    resultsByGame[key].push(r);
+  });
 
   const stats = {};
   gsRows.forEach(row => {
-    const res = Object.values(resultMap).find(r =>
-      r.sessionId === row.sessionId && String(r.gameNumber) === String(row.gameNumber) &&
-      (r.teamA === row.teamName || r.teamB === row.teamName)
+    const key = row.sessionId + '|' + row.gameNumber;
+    const res = (resultsByGame[key] || []).find(r =>
+      r.teamA === row.teamName || r.teamB === row.teamName
     );
     if (!res) return;
     const name = row.fullName;
