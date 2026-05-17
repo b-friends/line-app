@@ -16,7 +16,10 @@
  */
 function makeOneGame(players, gameNumber, pairCount, vsCount) {
   const n = players.length;
-  const numTeams = n >= 13 ? 4 : 2;
+  const numTeams = n >= 12 ? 4 : 2;
+  if (n < numTeams * 3 || n > numTeams * 4) {
+    throw new Error('参加者数 ' + n + ' 名でチームを構成できません（' + numTeams + 'チーム、各3〜4名が必要）。休憩者を調整してください。');
+  }
   vsCount = vsCount || {};
 
   // 複合スコアを計算（チーム均一化の基準）
@@ -196,7 +199,8 @@ function buildMatchups_(teams, vsCount, numTeams, gameNumber) {
  */
 function suggestRest(allPlayers) {
   const n = allPlayers.length;
-  const playCount = n >= 13 ? Math.min(n, 16) : Math.min(n, 8);
+  const numTeams = n >= 12 ? 4 : 2;
+  const playCount = Math.min(n, numTeams * 4);
   const restCount = n - playCount;
   if (restCount <= 0) return [];
 

@@ -553,19 +553,20 @@ async function loadTeamPlayerList() {
   const suggestedRestIds = r.ok ? r.suggestedRestIds : [];
   _playerStats = r.ok ? (r.playerStats || []) : [];
 
-  // 参加者一覧を構築
+  // 当日参加チェック済み（attended）のみを対象とする
   const session = (S.schedule||[]).flatMap(m => m.sessions).find(s => s.sessionId === sessionId);
-  if (!session || !session.attendees.length) {
-    el('teamPlayerList').innerHTML = '<p class="muted">参加予定者がいません。</p>';
+  const attendedPlayers = session ? session.attendees.filter(a => a.answer === 'attended') : [];
+  if (!attendedPlayers.length) {
+    el('teamPlayerList').innerHTML = '<p class="muted">当日参加チェック済みの方がいません。スケジュールページで「当日参加する」を押してから編成してください。</p>';
     return;
   }
   el('teamPlayerList').innerHTML =
     '<p class="muted" style="margin-bottom:8px">休憩する方のチェックを外してください。システムが休憩候補を自動提案しています。</p>' +
-    session.attendees.map(a =>
+    attendedPlayers.map(a =>
       '<label class="player-check-item">' +
         '<input type="checkbox" class="player-check" value="' + esc(a.lineId) + '"' +
         (suggestedRestIds.includes(a.lineId) ? '' : ' checked') + '>' +
-        '<span>' + esc(a.fullName) + (a.isTrial ? ' <span class="trial-badge">体験</span>' : '') + '</span>' +
+        '<span>' + esc(a.fullName) + '</span>' +
       '</label>'
     ).join('');
   } finally { _loadingTeam = false; }
@@ -577,13 +578,14 @@ async function doGenerateTeams() {
   let checkedIds = Array.from(el('teamPlayerList').querySelectorAll('.player-check:checked')).map(i => i.value);
   const allIds = Array.from(el('teamPlayerList').querySelectorAll('.player-check')).map(i => i.value);
 
-  // 人数超過時は在席参加率が高い順に自動休憩
-  const maxPlay = checkedIds.length >= 13 ? 16 : 8;
+  // 人数超過時は在席参加率が高い順に自動休憩（体験者は最後に休憩）
+  const numTeams = checkedIds.length >= 12 ? 4 : 2;
+  const maxPlay = numTeams * 4;
   if (checkedIds.length > maxPlay) {
     const overCount = checkedIds.length - maxPlay;
     const sorted = checkedIds
       .map(id => _playerStats.find(p => p.lineId === id) || { lineId: id, attendanceRate: 1, isTrial: false })
-      .sort((a, b) => a.isTrial !== b.isTrial ? (a.isTrial ? -1 : 1) : b.attendanceRate - a.attendanceRate);
+      .sort((a, b) => a.isTrial !== b.isTrial ? (a.isTrial ? 1 : -1) : b.attendanceRate - a.attendanceRate);
     const autoRest = sorted.slice(0, overCount).map(p => p.lineId);
     autoRest.forEach(id => {
       const cb = el('teamPlayerList').querySelector('.player-check[value="' + id + '"]');
