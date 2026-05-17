@@ -620,7 +620,7 @@ function renderGameResult(game, restPlayers) {
     html += '<div class="team-box"><div class="team-name">' + esc(t.name) + '</div>';
     html += '<div class="team-meta">' + esc(t.genderSummary) + ' / ' + esc(t.ageSummary) + ' / 勝率' + esc(t.avgWinRate) + '</div>';
     t.members.forEach(m => {
-      const wr = m.totalGames > 0 ? ' 勝率' + m.winRate + '%(得点差' + (m.avgScoreDiff >= 0 ? '+' : '') + Math.round(m.avgScoreDiff || 0) + ')' : '';
+      const wr = m.totalGames > 0 ? ' 勝率' + m.winRate.toFixed(1) + '%(得点差' + (m.avgScoreDiff >= 0 ? '+' : '') + Math.round(m.avgScoreDiff || 0) + ')' : '';
       const trial = m.isTrial ? ' <span class="trial-badge">体験</span>' : '';
       html += '<div class="team-member">' + esc(m.fullName) + trial + ' <span class="muted">' + esc(m.gender) + (m.ageApril1 ? ' ' + m.ageApril1 + '歳' : '') + wr + '</span></div>';
     });
@@ -699,7 +699,7 @@ function renderWinRates(winRates) {
   if (!entries.length) { root.innerHTML = '<p class="muted">まだ試合結果がありません。</p>'; return; }
   let html = '<table class="wr-table"><tr><th>氏名</th><th>試合</th><th>勝</th><th>負</th><th>分</th><th>勝率</th></tr>';
   entries.forEach(([name, s]) => {
-    html += '<tr><td>' + esc(name) + '</td><td>' + s.games + '</td><td>' + s.wins + '</td><td>' + s.losses + '</td><td>' + s.draws + '</td><td><strong>' + s.winRate + '%</strong></td></tr>';
+    html += '<tr><td>' + esc(name) + '</td><td>' + s.games + '</td><td>' + s.wins + '</td><td>' + s.losses + '</td><td>' + s.draws + '</td><td><strong>' + s.winRate.toFixed(1) + '%</strong></td></tr>';
   });
   html += '</table>';
   root.innerHTML = html;
@@ -740,7 +740,7 @@ function renderStats(s, recentGames) {
       '<div class="stat-box"><div class="stat-num">' + s.wins    + '</div><div class="stat-label">勝</div></div>' +
       '<div class="stat-box"><div class="stat-num">' + s.losses  + '</div><div class="stat-label">負</div></div>' +
       '<div class="stat-box"><div class="stat-num">' + s.draws   + '</div><div class="stat-label">分</div></div>' +
-      '<div class="stat-box accent"><div class="stat-num">' + s.winRate + '%</div><div class="stat-label">勝率</div></div>' +
+      '<div class="stat-box accent"><div class="stat-num">' + s.winRate.toFixed(1) + '%</div><div class="stat-label">勝率</div></div>' +
     '</div>';
 
   if (_chartDonut) _chartDonut.destroy();

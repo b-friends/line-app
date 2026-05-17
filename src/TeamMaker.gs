@@ -233,7 +233,8 @@ function ageSummary_(members) {
 function avgWinRate_(members) {
   const rates = members.map(p => p.winRate);
   if (!rates.length) return '-';
-  return Math.round(rates.reduce((s, r) => s + r, 0) / rates.length) + '%';
+  const avg = rates.reduce((s, r) => s + r, 0) / rates.length;
+  return (Math.round(avg * 10) / 10).toFixed(1) + '%';
 }
 
 function shuffleArray_(arr) {

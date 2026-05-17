@@ -634,7 +634,7 @@ function calcWinRates_() {
 
   const VIRTUAL = 5;
   Object.values(stats).forEach(s => {
-    s.winRate = s.games > 0 ? Math.round(s.wins / s.games * 100) : 0;
+    s.winRate = s.games > 0 ? Math.round(s.wins / s.games * 1000) / 10 : 0;
     s.adjustedWinRate = (s.wins + VIRTUAL * 0.5) / (s.games + VIRTUAL);
     s.avgScoreDiff = s.games > 0 ? s.scoreDiffSum / s.games : 0;
   });
