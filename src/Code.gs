@@ -1045,18 +1045,38 @@ function sortReportRows_(sheet) {
   range.setValues(values);
 }
 
+// Scheduleシートの日付順でデータ行をクリア→再書き込みして正しい順序を保証する
+function regenerateReportInOrder_(monthKey) {
+  const opsSS = getOpsSS_();
+  // ScheduleシートをeventDate昇順でソート
+  const sessions = Object.values(getScheduleMap_())
+    .filter(s => s.monthKey === monthKey)
+    .sort((a, b) => String(a.eventDate).localeCompare(String(b.eventDate)));
+
+  // 既存のReportシートがあればデータ行だけクリア（合計行・ヘッダーは保持）
+  const ym = monthKey.replace('-', '');
+  const rSheet = opsSS.getSheetByName('Report_' + ym);
+  if (rSheet) {
+    const keRow = findReportTotalRow_(rSheet);
+    if (keRow > REPORT_DATA_START_ROW_) {
+      const dataRows = keRow - REPORT_DATA_START_ROW_;
+      rSheet.getRange(REPORT_DATA_START_ROW_, 1, dataRows, rSheet.getLastColumn()).clearContent();
+      rSheet.getRange(REPORT_DATA_START_ROW_, 1, dataRows, 1).setNumberFormat('@STRING@');
+    }
+  }
+
+  // 日付順に1件ずつ再生成（空行の先頭から順番に埋まるので自然に昇順になる）
+  sessions.forEach(s => updateActivityReport_(s.sessionId));
+}
+
 function generateActivityReport(payload) {
   const profile = verifyIdToken_(payload.idToken);
   ensureAdmin_(profile.sub);
   const monthKey = String(payload.monthKey || '');
   if (!monthKey) throw new Error('月を指定してください。');
-  // その月の全セッションを再生成
-  const schedMap = getScheduleMap_();
-  const sessions = Object.values(schedMap).filter(s => s.monthKey === monthKey);
-  sessions.forEach(s => updateActivityReport_(s.sessionId));
+  regenerateReportInOrder_(monthKey);
   const ym = monthKey.replace('-', '');
   const reportName = 'Report_' + ym;
-  const url = getOpsSS_().getUrl() + '#gid=' + (getOpsSS_().getSheetByName(reportName) || {}).getSheetId();
   return { ok: true, message: monthKey + 'の活動報告書を生成しました。', sheetName: reportName };
 }
 
@@ -1068,19 +1088,13 @@ function exportActivityReport(payload) {
   const monthKey = String(payload.monthKey || '');
   if (!monthKey) throw new Error('月を指定してください。');
 
-  // 最新データで報告書を再生成
-  const schedMap = getScheduleMap_();
-  Object.values(schedMap).filter(s => s.monthKey === monthKey)
-    .forEach(s => updateActivityReport_(s.sessionId));
+  regenerateReportInOrder_(monthKey);
 
   const ym = monthKey.replace('-', '');
   const reportName = 'Report_' + ym;
   const opsSS = getOpsSS_();
   const rSheet = opsSS.getSheetByName(reportName);
-  if (!rSheet) throw new Error(monthKey + ' の活動報告書がありません。先に「報告書を生成」してください。');
-
-  // 開催日順にソートしてからPDF化
-  sortReportRows_(rSheet);
+  if (!rSheet) throw new Error(monthKey + ' の活動報告書がありません。');
 
   // スプレッドシート export URL でシート単体をPDF化
   const exportUrl =
