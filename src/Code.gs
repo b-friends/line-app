@@ -822,8 +822,76 @@ function addScheduleSessions(payload) {
       });
       added++;
     });
-    return { ok: true, message: added + '件の日程を登録しました。' };
+    const archived = archiveOldData_();
+    const archiveMsg = archived > 0 ? '（古いデータ ' + archived + ' 件をアーカイブしました）' : '';
+    return { ok: true, message: added + '件の日程を登録しました。' + archiveMsg };
   } finally { lock.releaseLock(); }
+}
+
+// ── 古いデータの自動アーカイブ ──
+
+function archiveOldData_() {
+  const opsSS = getOpsSS_();
+  const now = new Date();
+  let totalArchived = 0;
+
+  const targets = [
+    { sheetName: SHEET_NAMES.GAMESETS,    keepMonths: 24 },
+    { sheetName: SHEET_NAMES.GAMERESULTS, keepMonths: 24 },
+    { sheetName: SHEET_NAMES.RESPONSES,   keepMonths: 12 },
+  ];
+
+  targets.forEach(({ sheetName, keepMonths }) => {
+    const sheet = opsSS.getSheetByName(sheetName);
+    if (!sheet || sheet.getLastRow() < 2) return;
+
+    const cutoff = new Date(now.getFullYear(), now.getMonth() - keepMonths, 1);
+    const cutoffStr = Utilities.formatDate(cutoff, 'Asia/Tokyo', 'yyyy-MM-dd');
+    const headers = getSheetHeaders_(sheet);
+    const rows = readObjects_(sheet);
+
+    // 保持期間を超えた行を収集
+    const toArchive = rows.reduce((acc, r, i) => {
+      if (r.eventDate && String(r.eventDate) < cutoffStr) acc.push({ r, i });
+      return acc;
+    }, []);
+    if (!toArchive.length) return;
+
+    // 年ごとにまとめてアーカイブシートへ書き込む
+    const byYear = {};
+    toArchive.forEach(({ r }) => {
+      const year = String(r.eventDate).slice(0, 4);
+      if (!byYear[year]) byYear[year] = [];
+      byYear[year].push(headers.map(h => r[h] !== undefined ? r[h] : ''));
+    });
+    Object.entries(byYear).forEach(([year, values]) => {
+      const archName = 'Archive_' + sheetName + '_' + year;
+      let arch = opsSS.getSheetByName(archName);
+      if (!arch) {
+        arch = opsSS.insertSheet(archName);
+        arch.getRange(1, 1, 1, headers.length).setValues([headers]);
+        arch.setFrozenRows(1);
+      }
+      arch.getRange(arch.getLastRow() + 1, 1, values.length, headers.length).setValues(values);
+    });
+
+    // アクティブシートから削除（降順で連続行をまとめてdeleteRows）
+    const descIdx = toArchive.map(({ i }) => i).sort((a, b) => b - a);
+    let runStart = descIdx[0], runLen = 1;
+    for (let k = 1; k <= descIdx.length; k++) {
+      if (k < descIdx.length && descIdx[k] === runStart - runLen) {
+        runLen++;
+      } else {
+        sheet.deleteRows(runStart + 2, runLen);
+        if (k < descIdx.length) { runStart = descIdx[k]; runLen = 1; }
+      }
+    }
+
+    totalArchived += toArchive.length;
+    Logger.log('[Archive] ' + sheetName + ': ' + toArchive.length + '行を退避');
+  });
+
+  return totalArchived;
 }
 
 // ── 候補日削除 ──
