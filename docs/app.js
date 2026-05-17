@@ -622,7 +622,7 @@ function renderGameResult(game, restPlayers) {
     t.members.forEach(m => {
       const wr = m.totalGames > 0 ? ' 勝率' + m.winRate.toFixed(1) + '%(得点差' + (m.avgScoreDiff >= 0 ? '+' : '') + Math.round(m.avgScoreDiff || 0) + ')' : '';
       const trial = m.isTrial ? ' <span class="trial-badge">体験</span>' : '';
-      html += '<div class="team-member">' + esc(m.fullName) + trial + ' <span class="muted">' + esc(m.gender) + (m.ageApril1 ? ' ' + m.ageApril1 + '歳' : '') + wr + '</span></div>';
+      html += '<div class="team-member">' + esc(m.fullName) + trial + ' <span class="muted">' + esc(m.gender) + wr + '</span></div>';
     });
     html += '</div>';
   });

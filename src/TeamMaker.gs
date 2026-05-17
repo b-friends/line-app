@@ -76,14 +76,18 @@ function makeOneGame(players, gameNumber, pairCount, vsCount) {
  */
 function computeScores_(players) {
   const diffs = players.map(p => p.avgScoreDiff || 0);
-  const minDiff = Math.min(...diffs);
-  const maxDiff = Math.max(...diffs);
+  const minDiff = Math.min(...diffs), maxDiff = Math.max(...diffs);
   const diffRange = maxDiff - minDiff || 1;
 
+  const ages = players.map(p => Number(p.ageApril1) || 35);
+  const minAge = Math.min(...ages), maxAge = Math.max(...ages);
+  const ageRange = maxAge - minAge || 1;
+
   return players.map(p => {
-    const winScore  = p.winRate / 100;
-    const diffScore = ((p.avgScoreDiff || 0) - minDiff) / diffRange;
-    return winScore * 0.6 + diffScore * 0.4;
+    const winScore   = p.winRate / 100;
+    const diffScore  = ((p.avgScoreDiff || 0) - minDiff) / diffRange;
+    const youthScore = 1 - (Number(p.ageApril1 || 35) - minAge) / ageRange;
+    return winScore * 0.5 + diffScore * 0.3 + youthScore * 0.2;
   });
 }
 
@@ -116,7 +120,7 @@ function localSearch_(teams, scores, pairCount, numTeams) {
   allPlayers.forEach((p, i) => { scoreMap[p.fullName] = scores[i] || 0; });
 
   function teamScore(t) {
-    return t.reduce((s, p) => s + (scoreMap[p.fullName] || 0), 0) / (t.length || 1);
+    return t.reduce((s, p) => s + (scoreMap[p.fullName] || 0), 0);
   }
 
   function pairPenalty(t) {
