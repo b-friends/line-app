@@ -604,7 +604,7 @@ async function doGenerateTeams() {
   renderGameResult(r.game, r.restPlayers);
   show('resultCard');
   showMsg(r.message, 'success');
-  el('teamResult').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  el('teamCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function renderGameResult(game, restPlayers) {
