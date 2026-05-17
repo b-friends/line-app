@@ -1091,17 +1091,20 @@ function exportActivityReport(payload) {
   };
 }
 
-// PDF保存フォルダを取得または作成（運用スプレッドシートの親フォルダ内）
+// PDF保存フォルダを取得（未設定時は setupPdfExport() の実行を促すエラー）
 function getPdfFolder_() {
   const prop = PropertiesService.getScriptProperties().getProperty('PDF_FOLDER_ID');
-  if (prop) {
-    try { return DriveApp.getFolderById(prop); } catch (e) {}
-  }
+  if (!prop) throw new Error('PDF保存フォルダが未設定です。GASエディタから setupPdfExport() を実行してください。');
+  return DriveApp.getFolderById(prop);
+}
+
+// GASエディタから1回だけ実行してDriveの書き込み権限を認証しフォルダを作成する
+function setupPdfExport() {
   const parents = DriveApp.getFileById(getOpsSS_().getId()).getParents();
   const parent = parents.hasNext() ? parents.next() : DriveApp.getRootFolder();
   const folder = parent.createFolder('活動報告書PDF');
   PropertiesService.getScriptProperties().setProperty('PDF_FOLDER_ID', folder.getId());
-  return folder;
+  Logger.log('setupPdfExport 完了 — PDF_FOLDER_ID: ' + folder.getId());
 }
 
 // ── 管理者代理登録 ──
