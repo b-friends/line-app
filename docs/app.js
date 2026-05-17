@@ -604,7 +604,7 @@ async function doGenerateTeams() {
   renderGameResult(r.game, r.restPlayers);
   show('resultCard');
   showMsg(r.message, 'success');
-  el('messageCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  el('teamResult').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function renderGameResult(game, restPlayers) {
@@ -683,7 +683,7 @@ async function doSaveResults() {
     doRefreshWinRates();
     await loadTeamPlayerList();
     showMsg(r.message + ' 次のゲームの参加者を選択してください。', 'success');
-    el('messageCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    el('teamCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
   } else { showMsg(r.message, 'error'); }
 }
 
