@@ -59,6 +59,8 @@ document.addEventListener('DOMContentLoaded', () => {
   el('cancelProfileBtn').addEventListener('click', () => toggleProfileEdit(false));
   el('saveProfileBtn').addEventListener('click', doSaveProfile);
   el('adminRegBtn').addEventListener('click', doAdminRegister);
+  el('refreshTrialBtn').addEventListener('click', loadTrialMembers);
+  el('joinBtn').addEventListener('click', doJoinFromTrial);
   el('adminLoadSaturdaysBtn').addEventListener('click', loadSaturdays);
   el('adminRegisterDatesBtn').addEventListener('click', doRegisterDates);
   el('adminGenerateReportBtn').addEventListener('click', doGenerateReport);
@@ -114,7 +116,11 @@ async function loadSession() {
         doRefreshWinRates();
         showMsg('予定を選んでチーム編成してください。', 'info');
       } else if (page === 'register') {
-        if (r.isAdmin) show('adminRegisterPane');
+        if (r.isAdmin) {
+          show('adminRegisterPane');
+          show('adminTrialCard');
+          loadTrialMembers();
+        }
       } else if (page === 'docs') {
         doLoadDocs();
       } else if (page === 'mypage') {
@@ -219,6 +225,7 @@ async function doModalLink() {
 async function doModalNew() {
   const fullName    = normalizeNameSpaces(el('mNewFullName').value);
   const furigana    = normalizeNameSpaces(el('mNewFurigana').value);
+  const status      = el('mNewStatus').value;
   const gender      = el('mNewGender').value;
   const birthDate   = el('mNewBirthDate').value;
   const mobilePhone = el('mNewMobilePhone').value.trim();
@@ -227,7 +234,7 @@ async function doModalNew() {
     showMsg('必須項目をすべて入力してください。', 'error'); return;
   }
   disableAll(true);
-  const r = await api('registerNewMember', { idToken: S.idToken, fullName, furigana, gender, birthDate, mobilePhone, address });
+  const r = await api('registerNewMember', { idToken: S.idToken, fullName, furigana, status, gender, birthDate, mobilePhone, address });
   disableAll(false);
   if (!r.ok) { showMsg(r.message, 'error'); return; }
   S.member = r.member;
@@ -346,6 +353,7 @@ async function doAdminRegister() {
     idToken:     S.idToken,
     fullName,
     furigana:    normalizeNameSpaces(el('adminRegFurigana').value),
+    status:      el('adminRegStatus').value,
     gender:      el('adminRegGender').value,
     birthDate:   el('adminRegBirthDate').value,
     mobilePhone: el('adminRegMobilePhone').value.trim(),
@@ -356,7 +364,9 @@ async function doAdminRegister() {
   if (r.ok) {
     ['adminRegFullName','adminRegFurigana','adminRegBirthDate','adminRegMobilePhone','adminRegAddress']
       .forEach(id => { el(id).value = ''; });
+    el('adminRegStatus').value = '入会';
     el('adminRegGender').value = '';
+    loadTrialMembers();
   }
 }
 
@@ -715,10 +725,13 @@ async function doLoadMyPage() {
   renderProfileView(r.profile);
   renderStats(r.stats, r.recentGames || []);
   toggleProfileEdit(false);
+  // 体験メンバーのみ「入会に変更」ボタンを表示
+  el('joinBtn').classList.toggle('hidden', r.profile.status !== '体験');
 }
 
 function renderProfileView(p) {
   el('profileView').innerHTML = [
+    ['種別',       p.status      || '入会'],
     ['氏名',       p.fullName],
     ['ふりがな',     p.furigana    || '未登録'],
     ['性別',       p.gender      || '-'],
@@ -731,6 +744,40 @@ function renderProfileView(p) {
   ].map(([label, val]) =>
     '<div class="profile-row"><span class="profile-label">' + esc(label) + '</span><span class="profile-val">' + esc(val) + '</span></div>'
   ).join('');
+}
+
+async function doJoinFromTrial() {
+  if (!confirm('入会に変更します。よろしいですか？')) return;
+  disableAll(true);
+  const r = await api('updateProfile', { idToken: S.idToken, status: '入会' });
+  disableAll(false);
+  if (!r.ok) { showMsg(r.message, 'error'); return; }
+  showMsg('入会に変更しました。', 'success');
+  hide('joinBtn');
+  doLoadMyPage();
+}
+
+async function loadTrialMembers() {
+  const r = await api('getTrialMembers', { idToken: S.idToken });
+  if (!r.ok) return;
+  const root = el('adminTrialList');
+  if (!r.trials.length) { root.innerHTML = '<p class="muted">体験メンバーはいません。</p>'; return; }
+  root.innerHTML = r.trials.map(m =>
+    '<div class="schedule-row">' +
+      '<span>' + esc(m.fullName) + (m.furigana ? ' <span class="muted">(' + esc(m.furigana) + ')</span>' : '') + '</span>' +
+      '<button class="primary small" data-no="' + esc(m.no) + '" data-name="' + esc(m.fullName) + '">入会に変更</button>' +
+    '</div>'
+  ).join('');
+  root.querySelectorAll('[data-no]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm(btn.dataset.name + ' を入会に変更しますか？')) return;
+      disableAll(true);
+      const r2 = await api('adminChangeStatus', { idToken: S.idToken, no: btn.dataset.no, status: '入会' });
+      disableAll(false);
+      showMsg(r2.message, r2.ok ? 'success' : 'error');
+      if (r2.ok) loadTrialMembers();
+    });
+  });
 }
 
 function renderStats(s, recentGames) {

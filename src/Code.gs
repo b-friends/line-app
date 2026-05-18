@@ -99,6 +99,8 @@ function handleRequest_(action, params) {
       case 'getMyPage':               result = getMyPage(params.idToken); break;
       case 'updateProfile':           result = updateProfile(params); break;
       case 'adminRegisterMember':     result = adminRegisterMember(params); break;
+      case 'adminChangeStatus':        result = adminChangeStatus(params); break;
+      case 'getTrialMembers':          result = getTrialMembers(params.idToken); break;
       case 'getAdminPage':             result = getAdminPage(params.idToken); break;
       case 'addScheduleSessions':      result = addScheduleSessions(params); break;
       case 'deleteScheduleSession':    result = deleteScheduleSession(params); break;
@@ -265,10 +267,12 @@ function registerNewMember(payload) {
       ageApril1 = Math.floor((april1 - bd) / (365.25 * 24 * 60 * 60 * 1000));
     }
 
+    const status = payload.status === '体験' ? '体験' : '入会';
+
     // 新規行を追加
     const newRow = headers.map(h => {
       switch(h) {
-        case MC.STATUS:       return '入会';
+        case MC.STATUS:       return status;
         case MC.NO:           return newNo;
         case MC.FULL_NAME:    return fullName;
         case MC.FURIGANA:     return furigana;
@@ -706,6 +710,7 @@ function getMyPage(idToken) {
       homePhone:   member[MC.HOME_PHONE]   || '',
       address:     member[MC.ADDRESS]      || '',
       lineName:    profile.name            || '',
+      status:      member[MC.STATUS]       || '入会',
     },
     stats: wr,
     recentGames: myGames,
@@ -739,6 +744,10 @@ function updateProfile(payload) {
     map.forEach(([key, col]) => {
       if (payload[key] !== undefined) setColValue_(sheet, headers, rowNum, col, String(payload[key]).trim());
     });
+    // 体験→入会への自己変更（入会→体験への格下げは不可）
+    if (payload.status === '入会' && String(rows[idx][MC.STATUS] || '').trim() === '体験') {
+      setColValue_(sheet, headers, rowNum, MC.STATUS, '入会');
+    }
     // 4/1年齢を再計算
     const bd = String(payload.birthDate || rows[idx][MC.BIRTH_DATE] || '').trim();
     if (bd) {
@@ -1165,6 +1174,7 @@ function adminRegisterMember(payload) {
 
     const maxNo = rows.reduce((mx, r) => Math.max(mx, Number(r[MC.NO]) || 0), 0);
     const newNo = maxNo + 1;
+    const status = payload.status === '体験' ? '体験' : '入会';
 
     let ageApril1 = '';
     const birthDate = String(payload.birthDate || '').trim();
@@ -1176,7 +1186,7 @@ function adminRegisterMember(payload) {
 
     const newRow = headers.map(h => {
       switch(h) {
-        case MC.STATUS:       return '入会';
+        case MC.STATUS:       return status;
         case MC.NO:           return newNo;
         case MC.FULL_NAME:    return fullName;
         case MC.FURIGANA:     return String(payload.furigana || '').trim();
@@ -1191,6 +1201,38 @@ function adminRegisterMember(payload) {
     });
     appendRowRaw_(sheet, headers, newRow);
     return { ok: true, message: '「' + fullName + '」を代理登録しました。' };
+  } finally { lock.releaseLock(); }
+}
+
+// ── 体験メンバー一覧（管理者用）──
+
+function getTrialMembers(idToken) {
+  verifyIdToken_(idToken);
+  const rows = readObjects_(getRosterSheet_());
+  const trials = rows
+    .filter(r => String(r[MC.STATUS] || '').trim() === '体験')
+    .map(r => ({ no: r[MC.NO], fullName: r[MC.FULL_NAME], furigana: r[MC.FURIGANA] || '' }));
+  return { ok: true, trials };
+}
+
+// ── ステータス変更（管理者用）──
+
+function adminChangeStatus(payload) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const profile = verifyIdToken_(payload.idToken);
+    ensureAdmin_(profile.sub);
+    const targetNo  = String(payload.no || '').trim();
+    const newStatus = String(payload.status || '').trim();
+    if (!['入会', '体験', '休会', '退会'].includes(newStatus)) throw new Error('無効なステータスです。');
+    const sheet = getRosterSheet_();
+    const headers = getSheetHeaders_(sheet);
+    const rows = readObjects_(sheet);
+    const idx = rows.findIndex(r => String(r[MC.NO]).trim() === targetNo);
+    if (idx < 0) throw new Error('メンバーが見つかりません。');
+    setColValue_(sheet, headers, idx + 2, MC.STATUS, newStatus);
+    return { ok: true, message: rows[idx][MC.FULL_NAME] + ' のステータスを「' + newStatus + '」に変更しました。' };
   } finally { lock.releaseLock(); }
 }
 

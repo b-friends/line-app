@@ -67,6 +67,7 @@
           <div class="form-grid">
             <label><span>氏名（必須）</span><input type="text" id="adminRegFullName" placeholder="例: 山田 太郎"/></label>
             <label><span>ふりがな</span><input type="text" id="adminRegFurigana" placeholder="例: やまだ たろう"/></label>
+            <label><span>種別</span><select id="adminRegStatus"><option value="入会">入会</option><option value="体験">体験（お試し）</option></select></label>
             <label><span>性別</span><select id="adminRegGender"><option value="">選択…</option><option value="男">男</option><option value="女">女</option></select></label>
             <label><span>生年月日</span><input type="date" id="adminRegBirthDate"/></label>
             <label><span>携帯電話</span><input type="tel" id="adminRegMobilePhone" placeholder="090-xxxx-xxxx"/></label>
@@ -74,6 +75,11 @@
           </div>
           <div class="actions"><button class="primary" id="adminRegBtn">代理登録する</button></div>
         </div>
+      </section>
+      <section class="card hidden" id="adminTrialCard">
+        <div class="section-head"><h2>体験メンバー</h2><button class="secondary" id="refreshTrialBtn">更新</button></div>
+        <p class="muted">体験から入会への変更ができます。</p>
+        <div id="adminTrialList"></div>
       </section>
     </div>
 
@@ -88,7 +94,7 @@
         </div>
       </section>
       <section class="card">
-        <div class="section-head"><h2>プロフィール</h2><button class="secondary" id="editProfileBtn">編集</button></div>
+        <div class="section-head"><h2>プロフィール</h2><div><button class="primary small hidden" id="joinBtn">入会に変更</button> <button class="secondary" id="editProfileBtn">編集</button></div></div>
         <div id="profileView"></div>
         <div id="profileEdit" class="hidden">
           <div class="form-grid">
@@ -182,6 +188,7 @@
       <div class="form-grid">
         <label><span>氏名（必須）</span><input type="text" id="mNewFullName" placeholder="例: 山田 太郎"/></label>
         <label><span>ふりがな（必須）</span><input type="text" id="mNewFurigana" placeholder="例: やまだ たろう"/></label>
+        <label><span>種別（必須）</span><select id="mNewStatus"><option value="入会">入会</option><option value="体験">体験（お試し）</option></select></label>
         <label><span>性別（必須）</span><select id="mNewGender"><option value="">選択…</option><option value="男">男</option><option value="女">女</option></select></label>
         <label><span>生年月日（必須）</span><input type="date" id="mNewBirthDate"/></label>
         <label><span>携帯電話（必須）</span><input type="tel" id="mNewMobilePhone" placeholder="090-xxxx-xxxx"/></label>
