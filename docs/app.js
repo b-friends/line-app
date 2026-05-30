@@ -409,11 +409,20 @@ function renderSchedule(months) {
       art.className = 'session-card';
       art.dataset.sessionId = s.sessionId;
       const isToday = s.eventDate === today;
-      const alreadyAttended = s.attendees && s.attendees.some(a => a.lineId === (S.member && S.member.lineId));
-      const selfCheckBtn = isToday
-        ? '<button class="' + (alreadyAttended ? 'secondary' : 'primary') + ' self-attend-btn" data-sid="' + esc(s.sessionId) + '">' +
-          (alreadyAttended ? '当日参加済' : '当日参加する') + '</button>'
-        : '';
+      // attended（当日チェック済み）かどうかは myAnswer で判定する。
+      // yes だけでは attended にならないため yes のままでは「当日参加する」ボタンを表示し続ける
+      const alreadyAttended = s.myAnswer === 'attended';
+      let selfCheckArea = '';
+      if (isToday) {
+        if (alreadyAttended) {
+          selfCheckArea = '<div class="actions"><button class="secondary self-attend-btn" data-sid="' + esc(s.sessionId) + '">当日参加済</button></div>';
+        } else {
+          selfCheckArea =
+            '<div class="attend-notice">📣 チーム編成に参加するには「当日参加する」を押してください</div>' +
+            '<div class="actions"><button class="primary self-attend-btn" data-sid="' + esc(s.sessionId) + '">当日参加する</button></div>';
+        }
+        art.classList.add('today-highlight');
+      }
       art.innerHTML =
         '<div class="session-header"><div>' +
           '<div class="session-date">' + esc(s.eventDate) + (isToday ? ' <span class="pill today-pill">本日</span>' : '') + '</div>' +
@@ -429,7 +438,7 @@ function renderSchedule(months) {
           '<label><input type="radio" name="a-' + s.sessionId + '" value="undecided"' + (!s.myAnswer || s.myAnswer === 'undecided' ? ' checked' : '') + '> 未定</label>' +
         '</div>' +
         '<label class="note-field"><span>備考</span><input type="text" class="session-note-input" placeholder="任意" value="' + esc(s.myNote || '') + '"/></label>' +
-        (selfCheckBtn ? '<div class="actions">' + selfCheckBtn + '</div>' : '');
+        selfCheckArea;
       sec.appendChild(art);
     });
     root.appendChild(sec);
@@ -567,7 +576,8 @@ async function loadTeamPlayerList() {
   const session = (S.schedule||[]).flatMap(m => m.sessions).find(s => s.sessionId === sessionId);
   const attendedPlayers = session ? session.attendees.filter(a => a.answer === 'attended') : [];
   if (!attendedPlayers.length) {
-    el('teamPlayerList').innerHTML = '<p class="muted">当日参加チェック済みの方がいません。スケジュールページで「当日参加する」を押してから編成してください。</p>';
+    el('teamPlayerList').innerHTML =
+      '<div class="attend-notice">📣 チーム編成に参加するには、スケジュールページで「当日参加する」を押す必要があります。</div>';
     return;
   }
   el('teamPlayerList').innerHTML =

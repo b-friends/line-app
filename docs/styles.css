@@ -46,6 +46,8 @@
   .admin-check{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;background:#fff;border:1px solid var(--border)}
 
   .today-pill{background:#e6f4ea;color:var(--success);border-color:#a8d5b5;font-size:11px;min-height:22px;padding:0 8px}
+  .attend-notice{background:#fff8e1;border:1px solid #ffcc02;border-radius:10px;padding:10px 12px;font-size:13px;color:#7a5800;margin-bottom:8px}
+  .session-card.today-highlight{border-color:#ffcc02;background:#fffbf0}
 
   /* 管理ページ */
   .saturday-list{display:grid;gap:8px;margin-top:12px}
