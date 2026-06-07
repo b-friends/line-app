@@ -53,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
   el('saveButton').addEventListener('click', doSave);
   el('generateTeamsBtn').addEventListener('click', doGenerateTeams);
   el('saveResultsBtn').addEventListener('click', doSaveResults);
+  el('resetGameBtn').addEventListener('click', doResetGame);
   el('refreshWinRateBtn').addEventListener('click', doRefreshWinRates);
   el('refreshDocsBtn').addEventListener('click', doLoadDocs);
   el('editProfileBtn').addEventListener('click', () => toggleProfileEdit(true));
@@ -728,6 +729,22 @@ async function doSaveResults() {
     showMsg(r.message + ' 次のゲームの参加者を選択してください。', 'success');
     el('teamCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
   } else { showMsg(r.message, 'error'); }
+}
+
+async function doResetGame() {
+  const sessionId = el('teamSessionSelect').value;
+  if (!sessionId) return;
+  if (!confirm('第' + _currentGameNumber + 'ゲームのチーム編成を削除して選手選択からやり直しますか？')) return;
+  disableAll(true);
+  const r = await api('resetGame', { idToken: S.idToken, sessionId, gameNumber: _currentGameNumber });
+  disableAll(false);
+  if (!r.ok) { showMsg(r.message, 'error'); return; }
+  el('teamResult').innerHTML = '';
+  hide('resultCard');
+  show('generateTeamsBtn');
+  show('teamPlayerList');
+  showMsg(r.message, 'success');
+  el('teamCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // ── 勝率一覧 ──

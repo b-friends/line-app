@@ -94,6 +94,7 @@ function handleRequest_(action, params) {
       case 'suggestRest':              result = suggestRestAction(params); break;
       case 'getLatestGameNumber':       result = getLatestGameNumber(params); break;
       case 'submitGameResults':       result = submitGameResults(params); break;
+      case 'resetGame':               result = resetGame(params); break;
       case 'getWinRates':             result = getWinRates(params.idToken); break;
       case 'getDocs':                 result = getDocs(params.idToken); break;
       case 'getMyPage':               result = getMyPage(params.idToken); break;
@@ -643,6 +644,28 @@ function submitGameResults(payload) {
     });
 
     return { ok: true, message: results.length + 'ゲーム分の結果を保存しました。' };
+  } finally { lock.releaseLock(); }
+}
+
+// ── チーム編成リセット ──
+
+function resetGame(payload) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const profile = verifyIdToken_(payload.idToken);
+    const caller = findMemberByLineId_(profile.sub);
+    if (!caller) throw new Error('名簿に未登録です。');
+    const sessionId  = String(payload.sessionId  || '');
+    const gameNumber = Number(payload.gameNumber  || 0);
+    if (!sessionId || !gameNumber) throw new Error('パラメータが不正です。');
+    const sheet = getOpsSS_().getSheetByName(SHEET_NAMES.GAMESETS);
+    const rows  = readObjects_(sheet);
+    for (let i = rows.length - 1; i >= 0; i--) {
+      if (rows[i].sessionId === sessionId && Number(rows[i].gameNumber) === gameNumber)
+        sheet.deleteRow(i + 2);
+    }
+    return { ok: true, message: '第' + gameNumber + 'ゲームのチーム編成をリセットしました。' };
   } finally { lock.releaseLock(); }
 }
 
