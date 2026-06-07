@@ -581,7 +581,8 @@ async function loadTeamPlayerList() {
     return;
   }
   el('teamPlayerList').innerHTML =
-    '<p class="muted" style="margin-bottom:8px">休憩する方のチェックを外してください。システムが休憩候補を自動提案しています。</p>' +
+    '<p class="muted" style="margin-bottom:8px">休憩する方のチェックを外してください。<br>' +
+    '📌 休憩候補の自動提案ルール: 当日の参加ゲーム数が多い方から優先的に候補になります。体験の方は最後に候補になります。</p>' +
     attendedPlayers.map(a =>
       '<label class="player-check-item">' +
         '<input type="checkbox" class="player-check" value="' + esc(a.lineId) + '"' +

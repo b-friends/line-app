@@ -360,7 +360,10 @@ function markAttendance(payload) {
     const rows = readObjects_(sheet);
     rows.forEach((r, i) => {
       if (r.sessionId !== sessionId) return;
-      const newAns = presentIds.includes(r.lineId) ? 'attended' : r.answer;
+      // チェックを外されたattendedはyesに戻す（管理者による取り消し）
+      const newAns = presentIds.includes(r.lineId) ? 'attended'
+                   : r.answer === 'attended' ? 'yes'
+                   : r.answer;
       if (newAns !== r.answer) {
         r.answer = newAns;
         r.submittedAt = fmtJst_(new Date());
@@ -417,8 +420,39 @@ function generateTeams(payload) {
 
     if (players.length < 6) throw new Error('休憩者を除いた参加者が6名未満です。');
 
-    // 前ゲームのペアカウント・対戦カウントを構築
+    // 同時操作対策: 同ゲーム番号が既に存在する場合は既存データを返す
     const gsSheet = opsSS.getSheetByName(SHEET_NAMES.GAMESETS);
+    const existingForGame = readObjects_(gsSheet)
+      .filter(r => r.sessionId === sessionId && Number(r.gameNumber) === gameNumber);
+    if (existingForGame.length > 0) {
+      const teamMap = {};
+      existingForGame.forEach(r => {
+        if (!teamMap[r.teamName]) teamMap[r.teamName] = [];
+        teamMap[r.teamName].push({
+          fullName: r.fullName, gender: r.gender,
+          ageApril1: Number(r.ageApril1) || 0,
+          winRate: 0, totalGames: 0, avgScoreDiff: 0, isTrial: false,
+        });
+      });
+      const numTeams = Object.keys(teamMap).length;
+      const existingTeams = Object.entries(teamMap).sort((a, b) => a[0].localeCompare(b[0])).map(([name, members]) => ({
+        name, members,
+        genderSummary: '男' + members.filter(m => m.gender === '男').length + ' 女' + members.filter(m => m.gender !== '男').length,
+        ageSummary: members.length ? '平均' + Math.round(members.reduce((s, m) => s + m.ageApril1, 0) / members.length) + '歳' : '-',
+        avgWinRate: '-',
+      }));
+      const existingMatchups = numTeams === 4
+        ? ['チームA vs チームB（コート1）', 'チームC vs チームD（コート2）']
+        : ['チームA vs チームB'];
+      return {
+        ok: true,
+        game: { gameNumber, numTeams, teams: existingTeams, matchups: existingMatchups },
+        restPlayers: [],
+        message: '第' + gameNumber + 'ゲームのチーム編成を取得しました。',
+      };
+    }
+
+    // 前ゲームのペアカウント・対戦カウントを構築
     const prevRows = readObjects_(gsSheet).filter(r => r.sessionId === sessionId);
     const pairCount = {};
     const vsCount = {};
@@ -578,8 +612,16 @@ function submitGameResults(payload) {
     const eventDate = results[0].eventDate || '';
 
     results.forEach(r => {
-      // 同セッション・同ゲーム番号の既存行だけ削除（他ゲームは残す）
       const rows = readObjects_(sheet);
+      // 同時操作対策: 同じ対戦結果がすでに保存されていればスキップ
+      const alreadySaved = rows.some(row =>
+        row.sessionId === sessionId &&
+        String(row.gameNumber) === String(r.gameNumber) &&
+        ((row.teamA === r.teamA && row.teamB === r.teamB) ||
+         (row.teamA === r.teamB && row.teamB === r.teamA))
+      );
+      if (alreadySaved) return;
+      // 同セッション・同ゲーム番号の既存行だけ削除（他ゲームは残す）
       for (let i = rows.length - 1; i >= 0; i--) {
         if (rows[i].sessionId === sessionId &&
             String(rows[i].gameNumber) === String(r.gameNumber) &&
