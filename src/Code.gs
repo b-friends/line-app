@@ -543,16 +543,19 @@ function suggestRestAction(payload) {
     const eligibleGames = gameNumbers.filter(g => gameStartTime[g] >= joinTime).length;
     // 実際の参加ゲーム数
     const playedGames = gsRows.filter(r => r.fullName === a.fullName).length;
-    // 在席参加率：在席可能ゲームが0なら、1.0とする（新規到着者は中立評価）
-    const attendanceRate = eligibleGames > 0 ? playedGames / eligibleGames : 1.0;
     return {
       lineId: a.lineId,
       fullName: a.fullName,
       isTrial: String(m[MC.STATUS] || '').trim() === '体験',
-      attendanceRate,
+      eligibleGames,
+      playedGames,
     };
   });
-  return { ok: true, suggestedRestIds: suggestRest(allPlayers), playerStats: allPlayers.map(p => ({ lineId: p.lineId, attendanceRate: p.attendanceRate, isTrial: p.isTrial })) };
+  return {
+    ok: true,
+    suggestedRestIds: suggestRest(allPlayers),
+    playerStats: allPlayers.map(p => ({ lineId: p.lineId, isTrial: p.isTrial, eligibleGames: p.eligibleGames, playedGames: p.playedGames })),
+  };
 }
 
 function getLatestGameNumber(payload) {

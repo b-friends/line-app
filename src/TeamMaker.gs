@@ -208,10 +208,19 @@ function suggestRest(allPlayers) {
   const restCount = n - playCount;
   if (restCount <= 0) return [];
 
-  // 体験者は最後に休憩候補、在席参加率が高い人を優先的に休憩候補
+  // 休憩候補の優先順位:
+  //   1. 体験者は最後（参加機会を優先）
+  //   2. 遅く来た人が先（在席可能ゲーム数が少ない = 遅い到着）
+  //      → 早く来て準備した人が優先して参加できるよう配慮
+  //   3. 同じ到着タイミングなら休憩回数が少ない人が先（公平な休憩分配）
   const sorted = allPlayers.slice().sort((a, b) => {
     if (a.isTrial !== b.isTrial) return a.isTrial ? 1 : -1;
-    return b.attendanceRate - a.attendanceRate;
+    const aElig = a.eligibleGames || 0;
+    const bElig = b.eligibleGames || 0;
+    if (aElig !== bElig) return aElig - bElig;
+    const aRest = aElig - (a.playedGames || 0);
+    const bRest = bElig - (b.playedGames || 0);
+    return aRest - bRest;
   });
 
   return sorted.slice(0, restCount).map(p => p.lineId);

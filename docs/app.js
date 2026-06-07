@@ -582,7 +582,7 @@ async function loadTeamPlayerList() {
   }
   el('teamPlayerList').innerHTML =
     '<p class="muted" style="margin-bottom:8px">休憩する方のチェックを外してください。<br>' +
-    '📌 休憩候補の自動提案ルール: 当日の参加ゲーム数が多い方から優先的に候補になります。体験の方は最後に候補になります。</p>' +
+    '📌 休憩候補ルール: 遅く来た方 → 休憩数が少ない方 の順で候補になります。体験の方は最後です。</p>' +
     attendedPlayers.map(a =>
       '<label class="player-check-item">' +
         '<input type="checkbox" class="player-check" value="' + esc(a.lineId) + '"' +
@@ -605,8 +605,13 @@ async function doGenerateTeams() {
   if (checkedIds.length > maxPlay) {
     const overCount = checkedIds.length - maxPlay;
     const sorted = checkedIds
-      .map(id => _playerStats.find(p => p.lineId === id) || { lineId: id, attendanceRate: 1, isTrial: false })
-      .sort((a, b) => a.isTrial !== b.isTrial ? (a.isTrial ? 1 : -1) : b.attendanceRate - a.attendanceRate);
+      .map(id => _playerStats.find(p => p.lineId === id) || { lineId: id, isTrial: false, eligibleGames: 0, playedGames: 0 })
+      .sort((a, b) => {
+        if (a.isTrial !== b.isTrial) return a.isTrial ? 1 : -1;
+        const aElig = a.eligibleGames || 0, bElig = b.eligibleGames || 0;
+        if (aElig !== bElig) return aElig - bElig;
+        return (aElig - (a.playedGames || 0)) - (bElig - (b.playedGames || 0));
+      });
     const autoRest = sorted.slice(0, overCount).map(p => p.lineId);
     autoRest.forEach(id => {
       const cb = el('teamPlayerList').querySelector('.player-check[value="' + id + '"]');
