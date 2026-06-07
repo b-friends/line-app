@@ -106,6 +106,11 @@ async function loadSession() {
     const page = currentPage();
 
     if (r.memberFound && r.member) {
+      // 必須項目が未入力の場合はマイページ編集に強制移動（他ページは利用不可）
+      if (!checkRequiredFields() && page !== 'mypage') {
+        redirectToMypageEdit();
+        return;
+      }
       if (page !== 'teams') hide('messageCard');
       if (page === 'schedule') {
         renderSchedule(r.schedule || []);
@@ -195,13 +200,25 @@ function filterModalNames() {
   }
 }
 
-function checkRequiredFields() {
+function getMissingRequiredFields() {
   const p = (S.myPageData && S.myPageData.profile) || S.member;
-  return !!(p && p.furigana && p.gender && p.birthDate && p.mobilePhone && p.address);
+  if (!p) return ['基本情報'];
+  const missing = [];
+  if (!p.furigana)    missing.push('ふりがな');
+  if (!p.gender)      missing.push('性別');
+  if (!p.birthDate)   missing.push('生年月日');
+  if (!p.mobilePhone) missing.push('携帯電話');
+  if (!p.address)     missing.push('住所');
+  return missing;
+}
+
+function checkRequiredFields() {
+  return getMissingRequiredFields().length === 0;
 }
 
 function redirectToMypageEdit() {
-  showMsg('必須項目が未入力です。マイページで情報を入力してください。', 'error');
+  const missing = getMissingRequiredFields();
+  showMsg('必須項目（' + missing.join('・') + '）が未入力です。登録してから各機能が利用できます。', 'error');
   history.replaceState(null, '', '?page=mypage');
   showPage('mypage');
   doLoadMyPage().then(() => toggleProfileEdit(true));
