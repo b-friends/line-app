@@ -329,6 +329,13 @@ function submitAvailability(payload) {
       };
       const ei = existing.findIndex(r => r.lineId === profile.sub && r.sessionId === ses.sessionId);
       if (ei >= 0) {
+        // attended → yes への変更は許可しない（ラジオが自動で参加を選ぶための誤上書き防止）
+        // attended → no / undecided への変更は許可（急用等によるキャンセル）
+        if (existing[ei].answer === 'attended' && answer === 'yes') return;
+        // attended から変更する場合は submittedAt を保持しない（到着時刻をリセット）
+        if (existing[ei].answer === 'attended' && answer !== 'attended') {
+          record.submittedAt = now;
+        }
         writeRow_(sheet, ei + 2, HEADERS.Responses, record);
         existing[ei] = record;
       } else {
@@ -361,13 +368,18 @@ function markAttendance(payload) {
     const rows = readObjects_(sheet);
     rows.forEach((r, i) => {
       if (r.sessionId !== sessionId) return;
+      const wasAttended = r.answer === 'attended';
       // チェックを外されたattendedはyesに戻す（管理者による取り消し）
       const newAns = presentIds.includes(r.lineId) ? 'attended'
-                   : r.answer === 'attended' ? 'yes'
+                   : wasAttended ? 'yes'
                    : r.answer;
       if (newAns !== r.answer) {
         r.answer = newAns;
-        r.submittedAt = fmtJst_(new Date());
+        if (newAns === 'attended' && !wasAttended) {
+          r.submittedAt = fmtJst_(new Date()); // 初回attended化のみ到着時刻を設定
+        } else if (newAns === 'yes') {
+          r.submittedAt = ''; // チェック解除→到着時刻クリア（再チェック時に新しい時刻で記録）
+        }
         writeRow_(sheet, i + 2, HEADERS.Responses, r);
       }
     });
@@ -849,8 +861,11 @@ function markSelfAttendance(payload) {
     const rows = readObjects_(sheet);
     const idx = rows.findIndex(r => r.lineId === profile.sub && r.sessionId === sessionId);
     if (idx >= 0) {
+      const wasAttended = rows[idx].answer === 'attended';
       rows[idx].answer = 'attended';
-      rows[idx].submittedAt = fmtJst_(new Date());
+      if (!wasAttended) {
+        rows[idx].submittedAt = fmtJst_(new Date()); // 初回のみ到着時刻を記録
+      }
       writeRow_(sheet, idx + 2, HEADERS.Responses, rows[idx]);
     } else {
       // 参加予定未登録の場合も新規追加

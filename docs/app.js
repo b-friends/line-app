@@ -440,6 +440,8 @@ function renderSchedule(months) {
             '<div class="actions"><button class="primary self-attend-btn" data-sid="' + esc(s.sessionId) + '">当日参加する</button></div>';
         }
         art.classList.add('today-highlight');
+      } else if (alreadyAttended) {
+        selfCheckArea = '<div class="muted" style="font-size:13px;margin-top:4px">✓ 参加済</div>';
       }
       art.innerHTML =
         '<div class="session-header"><div>' +
