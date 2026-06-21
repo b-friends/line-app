@@ -1344,8 +1344,10 @@ function getDocs(idToken) {
 
 function buildScheduleView_(monthKey, lineId) {
   const opsSS = getOpsSS_();
+  const today = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd');
   const schedRows = readObjects_(opsSS.getSheetByName(SHEET_NAMES.SCHEDULE))
-    .filter(r => r.sessionId && String(r.openForResponse).toLowerCase() !== 'false');
+    .filter(r => r.sessionId && String(r.openForResponse).toLowerCase() !== 'false'
+              && r.eventDate >= today);
   const respRows = readObjects_(opsSS.getSheetByName(SHEET_NAMES.RESPONSES));
 
   const grouped = {};
